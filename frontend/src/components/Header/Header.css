@@ -1,0 +1,94 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2vh 4vw;
+  background: while;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  flex-wrap: wrap;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 1vw;
+}
+
+.logo {
+  height: 8vh;         /* logo theo chiều cao màn hình */
+  max-height: 80px;    /* giới hạn không quá to */
+  width: auto;
+  object-fit: contain;
+  padding-right: 10px;
+}
+
+.title {
+  font-size: 1.6vw;      /* co giãn theo chiều rộng màn hình */
+  margin: 0;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  font-size: 1.2vw;
+  margin: 0;
+  color: #555;
+  padding-left: 1vw ;
+}
+
+.right {
+  display: flex;
+  gap: 1vw;
+}
+
+/* .btn-login {
+  padding: 4px 12px;
+  border: 1px solid #aaa;
+  border-radius: 20px;
+  background: white;
+  color: #333;
+  cursor: pointer;
+}
+
+.btn-login:hover {
+  background: #f5f5f5;
+}
+
+.btn-register {
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: #38bdf8;
+  color: white;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-register:hover {
+  background: #0ea5e9;
+} */
+/* Responsive cho màn hình nhỏ (tablet, mobile) */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .title {
+    font-size: 18px;   /* cố định nhỏ lại */
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+
+  .logo {
+    height: 40px;
+  }
+
+  .right {
+    margin-top: 1vh;
+    width: 100%;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+}

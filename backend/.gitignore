@@ -1,0 +1,46 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Node dependencies
+node_modules/
+
+# Build and output folders
+dist/
+build/
+coverage/
+.cache/
+.tmp/
+logs/
+debug.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database, storage and uploads
+*.db
+*.sqlite
+data/
+uploads/
+storage/
+dump.sql
+
+# OS generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE and editor settings
+.vscode/
+.idea/
+*.iml
+
+# Optional dependency lock files
+# package-lock.json
+# yarn.lock
+
+# SSL keys or certificates
+*.pem
+*.key
+*.crt
