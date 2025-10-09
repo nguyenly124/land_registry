@@ -1,7 +1,7 @@
 import logo from './logo.svg';
 import './App.css';
 import Home from './pages/Home';
-import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar';
 import React from 'react';
 function App() {
   return (
@@ -23,8 +23,7 @@ function App() {
     // </div>
     <div>
       <Home /> 
-      <Navbar />
-      
+      <Sidebar />
     </div>
   );
 }
