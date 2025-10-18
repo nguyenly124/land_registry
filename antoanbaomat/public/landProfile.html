@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="vi">
+    <head>
+    <meta charset="UTF-8" />
+    <title>Chi tiết hồ sơ đất</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    </head>
+
+    <body class="bg-gray-100 min-h-screen">
+        <div class="container mx-auto px-4 py-8">
+            <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
+            <h1 class="text-2xl font-bold text-blue-600 mb-6 text-center">CHI TIẾT HỒ SƠ ĐẤT</h1>
+            <form id="landForm" class="space-y-5">
+                <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-1">Mã hồ sơ</label>
+                    <input type="text" id="id" class="w-full px-3 py-2 border rounded" readonly value="HS001" />
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-1">Số hồ sơ</label>
+                    <input type="text" id="recordNumber" class="w-full px-3 py-2 border rounded" readonly value="QSD2025001" />
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-1">Ngày đăng ký</label>
+                    <input type="date" id="registrationDate" class="w-full px-3 py-2 border rounded" readonly value="2025-10-01" />
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-1">Trạng thái</label>
+                    <input type="text" id="status" class="w-full px-3 py-2 border rounded" readonly value="Đã duyệt" />
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-1">Số thửa</label>
+                    <input type="text" id="plotNumber" class="w-full px-3 py-2 border rounded" readonly value="156/24" />
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-1">Diện tích (m²)</label>
+                    <input type="number" id="area" class="w-full px-3 py-2 border rounded" readonly value="120.5" />
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-1">Chủ hộ</label>
+                    <input type="text" id="ownerName" class="w-full px-3 py-2 border rounded" readonly value="Nguyễn Văn An" />
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-1">Số CCCD</label>
+                    <input type="text" id="ownerID" class="w-full px-3 py-2 border rounded" readonly value="079203000123" />
+                </div>
+                </div>
+                <div>
+                <label class="block text-gray-700 font-semibold mb-1">Địa chỉ</label>
+                <input type="text" id="address" class="w-full px-3 py-2 border rounded" readonly value="156/24 Đường Số 1, Phường Tân Phú, Quận 7, TP.HCM" />
+                </div>
+                <div>
+                <label class="block text-gray-700 font-semibold mb-1">Mục đích sử dụng</label>
+                <input type="text" id="purpose" class="w-full px-3 py-2 border rounded" readonly value="Đất ở đô thị" />
+                </div>
+                <div class="flex gap-4 justify-center mt-6">
+                <button
+                    type="button"
+                    id="editBtn"
+                    class="text-blue-600 font-semibold px-4 py-2 rounded border-2 border-blue-600 hover:bg-blue-600 hover:text-white"
+                >
+                    Chỉnh sửa thông tin
+                </button>
+                <button
+                    type="submit"
+                    id="saveBtn"
+                    class="bg-blue-600 text-white font-semibold px-4 py-2 rounded hover:bg-white hover:text-blue-600 border-2 border-blue-600"
+                    disabled
+                >
+                    Gửi phản hồi
+                </button>
+                </div>
+            </form>
+            </div>
+        </div>
+
+        <script>
+            const form = document.getElementById('landForm');
+            const editBtn = document.getElementById('editBtn');
+            const saveBtn = document.getElementById('saveBtn');
+            let isEditing = false;
+            let originalData = {};
+
+            // Lưu giá trị gốc
+            function storeOriginal() {
+                originalData = {};
+                Array.from(form.elements).forEach(el => {
+                if (el.tagName === 'INPUT') originalData[el.id] = el.value;
+                });
+            }
+            storeOriginal();
+
+            // Bật/tắt chế độ chỉnh sửa
+            editBtn.onclick = function () {
+                isEditing = !isEditing;
+                Array.from(form.elements).forEach(el => {
+                if (
+                    el.tagName === 'INPUT' &&
+                    el.id !== 'id' &&
+                    el.id !== 'recordNumber' &&
+                    el.id !== 'status' // Không cho chỉnh sửa trạng thái
+                ) {
+                    el.readOnly = !isEditing;
+                }
+                });
+                editBtn.textContent = isEditing ? 'Hủy' : 'Chỉnh sửa thông tin';
+                saveBtn.disabled = true;
+                if (!isEditing) {
+                // Reset về dữ liệu gốc nếu hủy
+                Array.from(form.elements).forEach(el => {
+                    if (el.tagName === 'INPUT' && originalData[el.id] !== undefined) {
+                    el.value = originalData[el.id];
+                    }
+                });
+                }
+            };
+
+            // Theo dõi thay đổi để bật nút gửi
+            form.oninput = function () {
+                if (!isEditing) return;
+                let changed = false;
+                Array.from(form.elements).forEach(el => {
+                if (el.tagName === 'INPUT' && originalData[el.id] !== undefined && el.id !== 'status') {
+                    if (el.value !== originalData[el.id]) changed = true;
+                }
+                });
+                saveBtn.disabled = !changed;
+            };
+
+            // Gửi phản hồi
+            form.onsubmit = function (e) {
+                e.preventDefault();
+                if (!isEditing) return;
+                // Ở đây bạn có thể gửi dữ liệu lên server hoặc lưu localStorage
+                storeOriginal();
+                isEditing = false;
+                Array.from(form.elements).forEach(el => {
+                if (
+                    el.tagName === 'INPUT' &&
+                    el.id !== 'id' &&
+                    el.id !== 'recordNumber' &&
+                    el.id !== 'status'
+                ) {
+                    el.readOnly = true;
+                }
+                });
+                editBtn.textContent = 'Chỉnh sửa thông tin';
+                saveBtn.disabled = true;
+                Swal.fire({
+                icon: 'success',
+                title: 'Gửi phản hồi thành công!',
+                text: 'Hệ thống đã ghi nhận phản hồi của bạn.',
+                confirmButtonColor: '#2563eb'
+                });
+            };
+        </script>
+    </body>
+</html>
