@@ -1,0 +1,41 @@
+const express = require('express');
+const router = express.Router();
+const { validate } = require('../middlewares/validateMiddleware');
+const authMiddleware = require('../middlewares/authMiddleware');
+const dossierController = require('../controllers/dossierController');
+const {
+  submitHoSoSchema,
+  approveHoSoSchema,
+  editHoSoSchema,
+  cancelHoSoSchema
+} = require('../validators/fileSchema');
+const { searchSchema } = require('../validators/searchSchema');
+
+// @route   POST /api/hoso/submit
+// @desc    Nộp hồ sơ mới
+// @access  Private (Chỉ người dân)
+router.post('/submit', authMiddleware, validate(submitHoSoSchema), dossierController.submitHoSo);
+
+// @route   PUT /api/hoso/approve
+// @desc    Duyệt/từ chối hồ sơ
+// @access  Private (Chỉ cán bộ)
+router.put('/approve', authMiddleware, validate(approveHoSoSchema), dossierController.approveHoSo);
+
+// @route   PUT /api/hoso/edit
+// @desc    Chỉnh sửa hồ sơ
+// @access  Private (Chỉ người dân)
+router.put('/edit', authMiddleware, validate(editHoSoSchema), dossierController.editHoSo);
+
+// @route   PUT /api/hoso/cancel
+// @desc    Yêu cầu hủy hồ sơ
+// @access  Private (Chỉ người dân)
+router.put('/cancel', authMiddleware, validate(cancelHoSoSchema), dossierController.cancelHoSo);
+
+// @route   GET /api/hoso/search
+// @desc    Tìm kiếm hồ sơ
+// @access  Private
+// Lưu ý: searchSchema được validate bằng req.query thay vì req.body
+// Bạn có thể cần một middleware validate riêng cho req.query
+router.get('/search', validate(searchSchema), dossierController.searchHoSo);
+
+module.exports = router;
