@@ -28,6 +28,16 @@ module.exports = function(sequelize, DataTypes) {
     last_login: {
       type: DataTypes.DATE,
       allowNull: true
+    },
+    password_last_changed: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      defaultValue: Sequelize.Sequelize.literal('CURRENT_TIMESTAMP')
+    },
+    password_expiration_days: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 30
     }
   }, {
     sequelize,

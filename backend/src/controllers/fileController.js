@@ -1,5 +1,5 @@
 const { initModels } = require('../models/init-models');
-const { sequelize } = require('../config/database');
+const { sequelize } = require('../config/db');
 const path = require('path');
 const fs = require('fs');
 
@@ -78,7 +78,35 @@ exports.getDocumentsByHoSoId = async (req, res) => {
         res.status(500).json({ message: 'Đã có lỗi xảy ra. Vui lòng thử lại.' });
     }
 };
+exports.getDocumentById = async (req, res) => {
+  try {
+    const { doc_id } = req.params;
+    const { id: userId, role } = req.user;
 
+    // Tìm file theo ID, đồng thời lấy thông tin hồ sơ để check quyền
+    const document = await HoSoDocument.findByPk(doc_id, {
+      include: [{ model: HoSo, attributes: ['account_id'] }]
+    });
+
+    if (!document) {
+      return res.status(404).json({ message: 'Không tìm thấy tài liệu.' });
+    }
+
+    // Người dân chỉ xem được tài liệu của chính hồ sơ mình nộp
+    if (role === 'Người dân' && document.HoSo.account_id !== userId) {
+      return res.status(403).json({ message: 'Bạn không có quyền xem tài liệu này.' });
+    }
+
+    res.status(200).json({
+      message: 'Lấy thông tin tài liệu thành công.',
+      data: document
+    });
+
+  } catch (error) {
+    console.error('Lỗi khi lấy tài liệu:', error);
+    res.status(500).json({ message: 'Đã có lỗi xảy ra. Vui lòng thử lại.' });
+  }
+};
 // --- Hàm xóa một tài liệu ---
 exports.deleteDocument = async (req, res) => {
     try {

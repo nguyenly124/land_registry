@@ -8,14 +8,35 @@ const { HoSo, HoSoDocument,LandParcel, UserProfile, Account } = initModels(seque
 exports.submitHoSo = async (req, res) => {
     try {
         const { type, parcelId } = req.body;
-        const accountId = req.user.id; // Lấy account_id từ token
+        const { id: accountId, role } = req.user; 
 
+        // Nếu có parcelId thì kiểm tra xem thửa đất tồn tại không
+        let parcel = null;
+        if (parcelId) {
+            parcel = await LandParcel.findByPk(parcelId);
+            if (!parcel) {
+                return res.status(404).json({ message: 'Không tìm thấy thửa đất.' });
+            }
+
+            // Nếu người dân nộp hồ sơ thì phải là chủ sở hữu thửa đất đó
+            if (role === 'Người dân' && parcel.owner_id !== accountId) {
+                return res.status(403).json({ message: 'Bạn không có quyền nộp hồ sơ cho thửa đất này.' });
+            }
+        }
+
+        // Tạo mới hồ sơ
         const newHoSo = await HoSo.create({
             account_id: accountId,
-            parcel_id: parcelId,
-            type: type
+            parcel_id: parcelId || null,
+            type: type.trim(),
+            status: 'Chờ xử lý'
         });
-        res.status(201).json({ message: 'Nộp hồ sơ thành công.', hoso: newHoSo });
+
+        res.status(201).json({
+            message: 'Nộp hồ sơ thành công.',
+            hoso: newHoSo
+        });
+
     } catch (error) {
         console.error('Lỗi khi nộp hồ sơ:', error);
         res.status(500).json({ message: 'Đã có lỗi xảy ra. Vui lòng thử lại.' });

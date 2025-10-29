@@ -5,6 +5,7 @@ var _HoSo = require("./hoSo");
 var _HoSoDocument = require("./hoSoDocument");
 var _LandParcel = require("./landParcel");
 var _Notification = require("./notification");
+var _PasswordHistory = require("./passwordHistory");
 var _UserProfile = require("./userProfile");
 var _PlayingWithNeon = require("./playingWithNeon");
 var _UsersSync = require("./usersSync");
@@ -16,6 +17,7 @@ function initModels(sequelize) {
   var HoSoDocument = _HoSoDocument(sequelize, DataTypes);
   var LandParcel = _LandParcel(sequelize, DataTypes);
   var Notification = _Notification(sequelize, DataTypes);
+  var PasswordHistory = _PasswordHistory(sequelize, DataTypes);
   var UserProfile = _UserProfile(sequelize, DataTypes);
   var PlayingWithNeon = _PlayingWithNeon(sequelize, DataTypes);
   var UsersSync = _UsersSync(sequelize, DataTypes);
@@ -26,6 +28,8 @@ function initModels(sequelize) {
   Account.hasMany(LandParcel, { as: "LandParcels", foreignKey: "owner_id"});
   Notification.belongsTo(Account, { as: "account", foreignKey: "account_id"});
   Account.hasMany(Notification, { as: "Notifications", foreignKey: "account_id"});
+  PasswordHistory.belongsTo(Account, { as: "account", foreignKey: "account_id"});
+  Account.hasMany(PasswordHistory, { as: "PasswordHistories", foreignKey: "account_id"});
   UserProfile.belongsTo(Account, { as: "account", foreignKey: "account_id"});
   Account.hasMany(UserProfile, { as: "UserProfiles", foreignKey: "account_id"});
   BlockchainTransaction.belongsTo(HoSo, { as: "hoso", foreignKey: "hoso_id"});
@@ -42,6 +46,7 @@ function initModels(sequelize) {
     HoSoDocument,
     LandParcel,
     Notification,
+    PasswordHistory,
     UserProfile,
     PlayingWithNeon,
     UsersSync,

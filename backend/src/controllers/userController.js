@@ -3,7 +3,7 @@ const { sequelize } = require('../config/db');
 const userProfile = require('../models/userProfile');
 const bcrypt = require('bcryptjs');
 // Khởi tạo các models
-const { Account, UserProfile } = initModels(sequelize);
+const { Account, UserProfile,PasswordHistory } = initModels(sequelize);
 
 // Hàm lấy thông tin hồ sơ của người dùng hiện tại
 exports.getProfile = async (req, res) => {
@@ -110,13 +110,43 @@ exports.changePassword = async (req, res) => {
                 if (isSameAsOld) {
                     return res.status(400).json({ message: 'Mật khẩu mới không được trùng với mật khẩu cũ.' });
                 }
+
+        const lastPasswords = await PasswordHistory.findAll({
+          where: { account_id: accountId },
+          order: [['changed_at', 'DESC']],
+          limit: 5,
+        });        
+
+        for (const history of lastPasswords) {
+          const isDuplicate = await bcrypt.compare(newPassword, history.password_hash);
+          if (isDuplicate) {
+            return res.status(400).json({
+              message: 'Mật khẩu mới không được trùng với 5 mật khẩu gần nhất.',
+            });
+          }
+        }
         // 3. Mã hóa mật khẩu mới
         const salt = await bcrypt.genSalt(10);
         const newHashedPassword = await bcrypt.hash(newPassword, salt);
 
         // 4. Cập nhật mật khẩu mới vào database
-        await account.update({ password: newHashedPassword });
+        await account.update({ password: newHashedPassword, last_password_change: new Date(), });
+        await PasswordHistory.create({
+          account_id: accountId,
+          password_hash: hashedPassword,
+        });
 
+        const allPasswords = await PasswordHistory.findAll({
+          where: { account_id: accountId },
+          order: [['changed_at', 'DESC']],
+        });
+
+        if (allPasswords.length > 5) {
+          const toDelete = allPasswords.slice(5);
+          for (const record of toDelete) {
+            await record.destroy();
+          }
+        }
         res.status(200).json({ message: 'Đổi mật khẩu thành công.' });
     } catch (error) {
         console.error('Lỗi khi đổi mật khẩu:', error);

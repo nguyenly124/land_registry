@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { validate } = require('../middlewares/validateMiddleware');
 const authMiddleware = require('../middlewares/authMiddleware');
+const passwordExpiryMiddleware=require('../middlewares/passwordExpiryMiddleware');
 const userController = require('../controllers/userController');
 const { 
   createStaffAccountSchema,
@@ -9,6 +10,7 @@ const {
   changePasswordSchema
 } = require('../validators/authSchema');
 
+router.use(authMiddleware,passwordExpiryMiddleware);
 // @route   POST /api/auth/create-staff
 // @desc    Tạo tài khoản cán bộ
 // @access  Private (Chỉ Admin)

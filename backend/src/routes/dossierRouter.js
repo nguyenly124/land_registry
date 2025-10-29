@@ -8,7 +8,7 @@ const {
   approveHoSoSchema,
   editHoSoSchema,
   cancelHoSoSchema
-} = require('../validators/fileSchema');
+} = require('../validators/documentSchema');
 const { searchSchema } = require('../validators/searchSchema');
 
 // @route   POST /api/hoso/submit
