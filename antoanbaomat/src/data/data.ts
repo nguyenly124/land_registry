@@ -143,6 +143,7 @@ export const userAccounts: AuthUser[] = [
         password: 'Test@1234c',
         CCCD: '987654321123',
         role: 'user',
+        
     },
 
     {
