@@ -1,11 +1,12 @@
 const { initModels } = require('../models/init-models');
 const { sequelize } = require('../config/db');
-
+const { emit } = require('../utils/NotificationEvent');
 // Khởi tạo models
 const { HoSo, HoSoDocument,LandParcel, UserProfile, Account } = initModels(sequelize);
 
 // Chức năng Nộp hồ sơ mới
 exports.submitHoSo = async (req, res) => {
+    const io = req.app.get('io');
     try {
         const { type, parcelId } = req.body;
         const { id: accountId, role } = req.user; 
@@ -31,7 +32,13 @@ exports.submitHoSo = async (req, res) => {
             type: type.trim(),
             status: 'Chờ xử lý'
         });
-
+        emit('hoso.submitted', {
+        io,
+        accountId,
+        type: newHoSo.type,
+        hosoId: newHoSo.hoso_id,
+        parcelId: newHoSo.parcel_id
+        });
         res.status(201).json({
             message: 'Nộp hồ sơ thành công.',
             hoso: newHoSo
@@ -43,26 +50,158 @@ exports.submitHoSo = async (req, res) => {
     }
 };
 
-// Chức năng Duyệt hồ sơ (cho Cán bộ)
-exports.approveHoSo = async (req, res) => {
-    try {
-        const { hosoId, action } = req.body;
+// ===  Cán bộ xác nhận xử lý hồ sơ ===
+exports.confirmProcessing = async (req, res) => {
+  const io = req.app.get('io');
+  try {
+    const { hosoId } = req.params;
+    const canBoId = req.user.id;
 
-        const hoso = await HoSo.findByPk(hosoId);
-        if (!hoso) {
-            return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
-        }
-
-        if (hoso.status !== 'Chờ xử lý' && hoso.status !== 'Đang xử lý') {
-            return res.status(400).json({ message: 'Hồ sơ này không thể xử lý.' });
-        }
-
-        await hoso.update({ status: action, updated_at: new Date() });
-        res.status(200).json({ message: `Hồ sơ đã được cập nhật trạng thái: ${action}.`, hoso });
-    } catch (error) {
-        console.error('Lỗi khi duyệt hồ sơ:', error);
-        res.status(500).json({ message: 'Đã có lỗi xảy ra. Vui lòng thử lại.' });
+    if (req.user.role !== 'Cán bộ') {
+      return res.status(403).json({ message: 'Chỉ cán bộ mới được xác nhận xử lý.' });
     }
+
+    const hoso = await HoSo.findByPk(hosoId);
+    if (!hoso) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+    if (hoso.status !== 'Chờ xử lý') {
+      return res.status(400).json({ message: 'Hồ sơ không ở trạng thái chờ xử lý.' });
+    }
+
+    await hoso.update({
+      status: 'Đang xử lý',
+      assigned_to: canBoId,
+      updated_at: new Date()
+    });
+
+    // Gửi thông báo
+    emit('hoso.processing', {
+      io,
+      accountId: hoso.account_id,
+      hosoId: hoso.hoso_id,
+      canBoId
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Hồ sơ đã được xác nhận xử lý.',
+      data: hoso
+    });
+  } catch (error) {
+    console.error('Lỗi xác nhận xử lý:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server.' });
+  }
+};
+
+// ===  Yêu cầu bổ sung tài liệu ===
+exports.requestSupplement = async (req, res) => {
+  const io = req.app.get('io');
+  try {
+    const { hosoId } = req.params;
+    const { note } = req.body;
+
+    if (!note?.trim()) {
+      return res.status(400).json({ message: 'Vui lòng nhập nội dung yêu cầu bổ sung.' });
+    }
+
+    const hoso = await HoSo.findByPk(hosoId);
+    if (!hoso) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+
+    await hoso.update({
+      status: 'Yêu cầu bổ sung',
+      supplement_note: note.trim(),
+      updated_at: new Date()
+    });
+
+    emit('hoso.supplement_requested', {
+      io,
+      accountId: hoso.account_id,
+      hosoId: hoso.hoso_id,
+      note
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Yêu cầu bổ sung đã được gửi.',
+      data: hoso
+    });
+  } catch (error) {
+    console.error('Lỗi yêu cầu bổ sung:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server.' });
+  }
+};
+
+// ===  Duyệt hồ sơ ===
+exports.approveHoSo = async (req, res) => {
+  const io = req.app.get('io');
+  try {
+    const { hosoId } = req.params;
+
+    const hoso = await HoSo.findByPk(hosoId);
+    if (!hoso) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+    if (!['Đang xử lý', 'Yêu cầu bổ sung'].includes(hoso.status)) {
+      return res.status(400).json({ message: 'Hồ sơ không thể duyệt.' });
+    }
+
+    await hoso.update({
+      status: 'Đã duyệt',
+      processed_by: req.user.id,
+      processed_at: new Date()
+    });
+
+    emit('hoso.approved', {
+      io,
+      accountId: hoso.account_id,
+      hosoId: hoso.hoso_id
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Hồ sơ đã được duyệt thành công!',
+      data: hoso
+    });
+  } catch (error) {
+    console.error('Lỗi duyệt hồ sơ:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server.' });
+  }
+};
+
+// ===  Từ chối hồ sơ ===
+exports.rejectHoSo = async (req, res) => {
+  const io = req.app.get('io');
+  try {
+    const { hosoId } = req.params;
+    const { reason } = req.body;
+
+    if (!reason?.trim()) {
+      return res.status(400).json({ message: 'Vui lòng nhập lý do từ chối.' });
+    }
+
+    const hoso = await HoSo.findByPk(hosoId);
+    if (!hoso) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+
+    await hoso.update({
+      status: 'Từ chối',
+      reject_reason: reason.trim(),
+      processed_by: req.user.id,
+      processed_at: new Date()
+    });
+
+    emit('hoso.rejected', {
+      io,
+      accountId: hoso.account_id,
+      hosoId: hoso.hoso_id,
+      reason
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Hồ sơ đã bị từ chối.',
+      data: hoso
+    });
+  } catch (error) {
+    console.error('Lỗi từ chối hồ sơ:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server.' });
+  }
 };
 
 // Chức năng Chỉnh sửa hồ sơ
@@ -110,52 +249,97 @@ exports.cancelHoSo = async (req, res) => {
 };
 // Hàm lấy tất cả hồ sơ
 exports.getAllHoSo = async (req, res) => {
-    try {
-        const { role, id: userId } = req.user; // Lấy role và ID từ token đã xác thực
+  try {
+    const { role, id: userId } = req.user;
 
-        // Khởi tạo điều kiện tìm kiếm
-        const whereClause = {};
+    // === 1. Lấy query params ===
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10)); // Giới hạn max 100
+    const offset = (page - 1) * limit;
+    const { status, search } = req.query;
 
-        // 1. Phân quyền hiển thị
-        // Chỉ cán bộ mới được lấy tất cả hồ sơ, nếu không sẽ bị giới hạn
-        if (role !== 'Cán bộ') {
-            // Nếu không phải cán bộ, chỉ được xem hồ sơ của chính mình
-            whereClause.account_id = userId;
-        }
+    // === 2. Xây dựng điều kiện WHERE ===
+    const whereClause = {};
 
-        // 2. Thực hiện truy vấn
-        const allHoSo = await HoSo.findAll({
-            where: whereClause,
-            order: [['created_at', 'DESC']], // Sắp xếp theo ngày tạo mới nhất
-            include: [
-                {
-                    model: Account,
-                    as: 'account', // Alias đã định nghĩa trong init-models.js
-                    attributes: ['username', 'role'],
-                    include: [{
-                        model: UserProfile,
-                        as: 'user_profile',
-                        attributes: ['full_name', 'phone', 'email']
-                    }]
-                },
-                {
-                    model: LandParcel,
-                    as: 'parcel',
-                    attributes: ['parcel_code', 'address']
-                }
-            ]
-        });
-
-        res.status(200).json({
-            message: 'Lấy danh sách hồ sơ thành công.',
-            count: allHoSo.length,
-            data: allHoSo
-        });
-
-    } catch (error) {
-        console.error('Lỗi khi lấy danh sách hồ sơ:', error);
-        res.status(500).json({ message: 'Đã có lỗi xảy ra. Vui lòng thử lại.' });
+    // Phân quyền: chỉ cán bộ xem tất cả, người dân chỉ xem của mình
+    if (role !== 'Cán bộ') {
+      whereClause.account_id = userId;
     }
+
+    // Lọc theo trạng thái
+    if (status && ['Chờ xử lý', 'Đang xử lý', 'Đã duyệt', 'Từ chối'].includes(status)) {
+      whereClause.status = status;
+    }
+
+    // Tìm kiếm đa trường
+    if (search && search.trim()) {
+      const keyword = `%${search.trim()}%`;
+      whereClause[Op.or] = [
+        { hoso_id: { [Op.like]: keyword } },
+        { type: { [Op.like]: keyword } },
+        { '$account.username$': { [Op.like]: keyword } },
+        { '$account.UserProfile.full_name$': { [Op.like]: keyword } },
+        { '$parcel.parcel_code$': { [Op.like]: keyword } },
+        { '$parcel.address$': { [Op.like]: keyword } }
+      ];
+    }
+
+    // === 3. Truy vấn với phân trang ===
+    const { count, rows } = await HoSo.findAndCountAll({
+      where: whereClause,
+      offset,
+      limit,
+      order: [['created_at', 'DESC']],
+      include: [
+        {
+          model: Account,
+          as: 'account',
+          attributes: ['account_id', 'username', 'role'],
+          include: [
+            {
+              model: UserProfile,
+              as: 'UserProfile',
+              attributes: ['full_name', 'phone', 'email']
+            }
+          ]
+        },
+        {
+          model: LandParcel,
+          as: 'parcel',
+          attributes: ['parcel_id', 'parcel_code', 'address', 'area']
+        }
+      ],
+      distinct: true, // Đảm bảo count chính xác khi có include
+      subQuery: false // Tối ưu truy vấn
+    });
+
+    // === 4. Tính toán phân trang ===
+    const totalPages = Math.ceil(count / limit);
+
+    // === 5. Trả về response chuẩn ===
+    res.status(200).json({
+      success: true,
+      message: 'Lấy danh sách hồ sơ thành công.',
+      data: rows,
+      count,
+      pagination: {
+        total: count,
+        page,
+        limit,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      }
+    });
+
+  } catch (error) {
+    console.error('Lỗi khi lấy danh sách hồ sơ:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Đã có lỗi xảy ra. Vui lòng thử lại sau.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 };
 //laays chi tiết hồ sơ 
 exports.getHoSoDetails = async (req, res) => {
@@ -167,7 +351,7 @@ exports.getHoSoDetails = async (req, res) => {
             include: [
                 {
                     model: HoSoDocument,
-                    as: 'ho_so_documents', // Alias đã định nghĩa trong init-models.js
+                    as: 'HoSoDocuments', // Alias đã định nghĩa trong init-models.js
                     attributes: ['doc_id', 'doc_name', 'file_path', 'uploaded_at']
                 },
                 {
@@ -176,7 +360,7 @@ exports.getHoSoDetails = async (req, res) => {
                     attributes: ['username', 'role'],
                     include: [{
                         model: UserProfile,
-                        as: 'user_profile',
+                        as: 'UserProfile',
                         attributes: ['full_name', 'phone', 'email']
                     }]
                 },
@@ -266,7 +450,7 @@ exports.searchHoSo = async (req, res) => {
                     attributes: ['username', 'role'],
                     include: [{
                         model: UserProfile,
-                        as: 'user_profile',
+                        as: 'UserProfile',
                         attributes: ['full_name', 'phone', 'email']
                     }]
                 },

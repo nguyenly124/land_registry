@@ -14,7 +14,13 @@ exports.createLandSchema = Joi.object({
   parcel_code: Joi.string().trim().max(100).required().messages(customMessages).label('Mã lô đất'),
   address: Joi.string().trim().max(255).required().messages(customMessages).label('Địa chỉ'),
   area: Joi.number().positive().required().messages(customMessages).label('Diện tích'),
-  owner_id: Joi.number().integer().required().messages(customMessages).label('Mã chủ sở hữu'),
+  owner_id: Joi.alternatives().try(Joi.number().integer(), Joi.valid(null)).messages(customMessages).label('Mã chủ sở hữu'),
+  land_type: Joi.string().trim().max(100).allow(null, '').messages(customMessages).label('Loại đất'),
+  certificate_number: Joi.string().trim().max(100).allow(null, '').messages(customMessages).label('Số giấy chứng nhận QSDĐ'),
+  certificate_issue_date: Joi.date().allow(null).messages(customMessages).label('Ngày cấp giấy chứng nhận'),
+  registration_status: Joi.string().trim().max(50).allow(null, '').messages(customMessages).label('Trạng thái đăng ký'),
+  latitude: Joi.number().min(-90).max(90).allow(null).messages(customMessages).label('Vĩ độ'),
+  longitude: Joi.number().min(-180).max(180).allow(null).messages(customMessages).label('Kinh độ'),
 }).messages(customMessages);
 
 // Schema cho chức năng Chỉnh sửa thông tin thửa đất

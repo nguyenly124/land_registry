@@ -19,6 +19,28 @@ const errorHandler = (err, req, res, next) => {
     message: 'Lỗi server',
     error: err.message,
   });
+  
+  if (err instanceof require('multer').MulterError) {
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({
+        success: false,
+        message: "Tên field không hợp lệ!",
+        tip: "Vui lòng dùng key: 'avatar' (không phải 'avata', 'file', 'photo', ...)"
+      });
+    }
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: "File quá lớn!",
+        tip: "Kích thước tối đa: 5MB"
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: "Lỗi xử lý file upload",
+      error: err.message
+    });
+  }
 };
 
 module.exports = errorHandler;

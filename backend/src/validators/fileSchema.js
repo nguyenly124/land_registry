@@ -16,20 +16,20 @@ exports.submitFileSchema = Joi.object({
 }).messages(customMessages);
 
 // Schema cho chức năng Duyệt hồ sơ
-exports.approveFileSchema = Joi.object({
+exports.approveHoSoSchema = Joi.object({
   hosoId: Joi.number().integer().required().messages(customMessages).label('Mã hồ sơ'),
   action: Joi.string().valid('Đã duyệt', 'Từ chối').required().messages(customMessages).label('Trạng thái duyệt'),
 }).messages(customMessages);
 
 // Schema cho chức năng Chỉnh sửa hồ sơ (để người dân sửa lại)
 // Các trường đều optional vì người dùng có thể chỉ muốn sửa một phần.
-exports.editFileSchema = Joi.object({
+exports.editHoSoSchema = Joi.object({
   hosoId: Joi.number().integer().required().messages(customMessages).label('Mã hồ sơ'),
   type: Joi.string().trim().max(100).optional().messages(customMessages).label('Loại hồ sơ'),
   parcelId: Joi.number().integer().optional().allow(null).messages(customMessages).label('Mã thửa đất'),
 }).messages(customMessages);
 
 // Schema cho chức năng Yêu cầu hủy hồ sơ
-exports.cancelFileSchema = Joi.object({
+exports.cancelHoSoSchema = Joi.object({
   hosoId: Joi.number().integer().required().messages(customMessages).label('Mã hồ sơ'),
 }).messages(customMessages);

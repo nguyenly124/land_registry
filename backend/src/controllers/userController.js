@@ -17,8 +17,8 @@ exports.getProfile = async (req, res) => {
       },
       include: [{
         model: UserProfile,
-        as: 'UserProfiles', // Sử dụng alias đã định nghĩa trong init-models.js
-        attributes: ['full_name', 'dob', 'address', 'phone', 'email', 'cccd', 'position', 'agency', 'staff_code']
+        as: 'UserProfile', // Sử dụng alias đã định nghĩa trong init-models.js
+        attributes: ['full_name', 'dob', 'address', 'phone', 'email', 'cccd', 'position', 'agency', 'staff_code','avatar_url']
       }]
     });
 
@@ -53,8 +53,8 @@ exports.getUsersByRole = async (req, res) => {
       },
       include: [{
         model: UserProfile,
-        as: 'UserProfiles',
-        attributes: ['full_name', 'dob', 'address', 'phone', 'email', 'cccd', 'position', 'agency', 'staff_code']
+        as: 'UserProfile',
+        attributes: ['full_name', 'dob', 'address', 'phone', 'email', 'cccd', 'position', 'agency', 'staff_code','avatar_url']
       }]
     });
 
@@ -71,7 +71,7 @@ exports.getUsersByRole = async (req, res) => {
 // Chức năng Cập nhật thông tin cá nhân
 exports.updateProfile = async (req, res) => {
     try {
-        const accountId = req.user.id; // Lấy account_id từ token đã được xác thực
+        const accountId = req.user.id; 
         const updatedData = req.body;
 
         const profile = await UserProfile.findOne({ where: { account_id: accountId } });
@@ -133,7 +133,7 @@ exports.changePassword = async (req, res) => {
         await account.update({ password: newHashedPassword, last_password_change: new Date(), });
         await PasswordHistory.create({
           account_id: accountId,
-          password_hash: hashedPassword,
+          password_hash: newHashedPassword,
         });
 
         const allPasswords = await PasswordHistory.findAll({
@@ -153,6 +153,44 @@ exports.changePassword = async (req, res) => {
         res.status(500).json({ message: 'Đã có lỗi xảy ra. Vui lòng thử lại.' });
     }
 };
+exports.uploadAvatar = async (req, res) => {
+  try {
+    const accountId = req.user?.id;
+    if (!accountId) {
+      return res.status(401).json({ message: "Không xác thực được người dùng!" });
+    }
+
+    // req.file do uploadAvatar.single('avatar') cung cấp
+    if (!req.file) {
+      return res.status(400).json({ message: "Vui lòng tải lên một file ảnh!" });
+    }
+
+    const imageUrl = req.file.path; 
+
+    const [updated] = await UserProfile.update(
+      { avatar_url: imageUrl },
+      { where: { account_id: accountId } }
+    );
+
+    if (updated === 0) {
+      return res.status(404).json({ message: "Không tìm thấy hồ sơ người dùng!" });
+    }
+
+    res.json({
+      message: "Cập nhật ảnh đại diện thành công!",
+      avatar_url: imageUrl,
+      uploaded_at: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error("LỖI UPLOAD:", error.message);
+    res.status(500).json({ 
+      message: "Lỗi server khi upload ảnh!" 
+    });
+  }
+};
+
+
 // Chức năng Tạo tài khoản Cán bộ 
 exports.createStaffAccount = async (req, res) => {
   

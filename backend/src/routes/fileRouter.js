@@ -4,6 +4,7 @@ const { validate } = require('../middlewares/validateMiddleware');
 const authMiddleware = require('../middlewares/authMiddleware');
 const fileController = require('../controllers/fileController');
 const upload = require("../middlewares/uploadMiddleware")
+const {uploadDocument}=require("../middlewares/cloudinaryUpload")
 const {
   uploadDocumentSchema,
   deleteDocumentSchema,
@@ -14,7 +15,7 @@ const { searchSchema } = require('../validators/searchSchema');
 // @route   POST /api/hoso/submit
 // @desc    Nộp hồ sơ mới
 // @access  Private (Chỉ người dân)
-router.post('/submit', authMiddleware, validate(uploadDocumentSchema),upload.single('file') , fileController.uploadDocument);
+router.post('/submit', authMiddleware, validate(uploadDocumentSchema),uploadDocument.single('file') , fileController.uploadDocument);
 
 router.get('/:hoso_id', authMiddleware, validate(getDocumentsByHoSoIdSchema), fileController.getDocumentsByHoSoId);
 

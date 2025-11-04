@@ -17,7 +17,7 @@ router.post('/', authMiddleware, validate(createLandSchema), landController.crea
 // @desc    Chỉnh sửa thông tin thửa đất
 // @access  Private (Chỉ cán bộ)
 router.put('/:id', authMiddleware, validate(editLandSchema), landController.editLand);
-router.get('/search',authMiddleware,landController.getLandsByUser);
+router.get('/search',authMiddleware,validate(searchSchema),landController.getLandsByUser);
 router.get('/',authMiddleware,landController.getAllLands);
 router.get('/:id',authMiddleware,landController.getLandById);
 

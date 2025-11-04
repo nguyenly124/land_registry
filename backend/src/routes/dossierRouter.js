@@ -8,7 +8,7 @@ const {
   approveHoSoSchema,
   editHoSoSchema,
   cancelHoSoSchema
-} = require('../validators/documentSchema');
+} = require('../validators/fileSchema');
 const { searchSchema } = require('../validators/searchSchema');
 
 // @route   POST /api/hoso/submit
@@ -38,4 +38,6 @@ router.put('/cancel', authMiddleware, validate(cancelHoSoSchema), dossierControl
 // Bạn có thể cần một middleware validate riêng cho req.query
 router.get('/search', validate(searchSchema), dossierController.searchHoSo);
 router.get('/getHoSoDetails',validate())
+router.get('/getdetail/:id',authMiddleware,dossierController.getHoSoDetails)
+router.get('/getall',authMiddleware,dossierController.getAllHoSo)
 module.exports = router;

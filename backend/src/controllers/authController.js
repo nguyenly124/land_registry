@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { initModels } = require('../models/init-models');
 const { sequelize } = require('../config/db');
 const { Op } = require("sequelize");
+const crypto = require('crypto');
 // Khởi tạo models
 const { Account, UserProfile } = initModels(sequelize);
 
@@ -69,12 +70,22 @@ exports.login = async (req, res) => {
 
         const token = jwt.sign({ id: account.account_id, role: account.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
-        res.status(200).json({ message: 'Đăng nhập thành công.', token, user: account });
+        res.status(200).json({
+            message: 'Đăng nhập thành công.',
+            token,
+            user: {
+                account_id: account.account_id,
+                username: account.username,
+                role: account.role,
+                last_login: account.last_login,
+            },
+         });
     } catch (error) {
         console.error('Lỗi khi đăng nhập:', error);
         res.status(500).json({ message: 'Đã có lỗi xảy ra. Vui lòng thử lại.' });
     }
 };
+
 //Làm mới token 
 exports.refreshToken = async (req, res) => {
     try {
@@ -100,8 +111,6 @@ exports.refreshToken = async (req, res) => {
             { expiresIn: JWT_EXPIRES_IN }
         );
         
-        // 4. (Tùy chọn) Vô hiệu hóa refresh token cũ và tạo token mới
-        // Đây là một biện pháp bảo mật để tránh token cũ bị sử dụng lại
         const newRefreshToken = crypto.randomBytes(32).toString('hex');
         account.refresh_token = newRefreshToken;
         await account.save();

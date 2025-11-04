@@ -27,6 +27,30 @@ module.exports = function(sequelize, DataTypes) {
         model: 'Account',
         key: 'account_id'
       }
+    },
+    land_type: {
+      type: DataTypes.STRING(100),
+      allowNull: true
+    },
+    certificate_number: {
+      type: DataTypes.STRING(100),
+      allowNull: true
+    },
+    certificate_issue_date: {
+      type: DataTypes.DATEONLY,
+      allowNull: true
+    },
+    registration_status: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    },
+    latitude: {
+      type: DataTypes.DECIMAL,
+      allowNull: true
+    },
+    longitude: {
+      type: DataTypes.DECIMAL,
+      allowNull: true
     }
   }, {
     sequelize,

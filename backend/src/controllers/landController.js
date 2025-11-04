@@ -21,7 +21,7 @@ exports.getAllLands = async (req, res) => {
                 as: 'owner', 
                 include: [{
                     model: UserProfile,
-                    as: 'UserProfiles',
+                    as: 'UserProfile',
                     attributes: ['full_name', 'email', 'phone']
                 }],
                 attributes: ['account_id', 'username', 'role']
@@ -49,8 +49,18 @@ exports.createLand = async (req, res) => {
             return res.status(403).json({ message: 'Bạn không có quyền thực hiện chức năng này.' });
         }
 
-        const { parcel_code, address, area, owner_id } = req.body;
-        const existingLand = await LandParcel.findOne({ parcel_code });
+        const { parcel_code,
+        address,
+        area,
+        owner_id,
+        land_type,
+        certificate_number,
+        certificate_issue_date,
+        registration_status,
+        latitude,
+        longitude 
+    } = req.body;
+        const existingLand = await LandParcel.findOne( {where: { parcel_code }});
         
         if (existingLand) {
             // Nếu đã tồn tại, trả về lỗi 409 Conflict
@@ -58,7 +68,17 @@ exports.createLand = async (req, res) => {
                 message: 'Thửa đất đã tồn tại. Vui lòng kiểm tra lại.' 
             });
         }
-        const newLand = await LandParcel.create({ parcel_code, address, area, owner_id });
+        const newLand = await LandParcel.create({ parcel_code,
+        address,
+        area,
+        owner_id,
+        land_type,
+        certificate_number,
+        certificate_issue_date,
+        registration_status,
+        latitude,
+        longitude
+     });
         res.status(201).json({ message: 'Tạo thửa đất thành công.', land: newLand });
     } catch (error) {
         console.error('Lỗi khi tạo thửa đất:', error);
@@ -80,7 +100,7 @@ exports.getLandById = async (req, res) => {
                 as: 'owner', // Lấy thông tin tài khoản chủ sở hữu
                 include: [{
                     model: UserProfile,
-                    as: 'UserProfiles', // Lấy thông tin hồ sơ (profile) chủ sở hữu
+                    as: 'UserProfile', // Lấy thông tin hồ sơ (profile) chủ sở hữu
                     attributes: ['full_name', 'phone', 'email'] // Chỉ lấy các trường cần thiết
                 }],
                 attributes: ['account_id', 'role'] // Chỉ lấy id và role của chủ sở hữu
@@ -214,7 +234,7 @@ exports.getLandsByUser = async (req, res) => {
                 attributes: ['account_id', 'username', 'role'],
                 include: [{
                     model: UserProfile,
-                    as: 'UserProfiles',
+                    as: 'UserProfile',
                     attributes: ['full_name', 'phone']
                 }]
             }]

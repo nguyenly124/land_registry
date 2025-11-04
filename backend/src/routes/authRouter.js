@@ -3,6 +3,7 @@ const router = express.Router();
 const { validate } = require('../middlewares/validateMiddleware');
 const authMiddleware = require('../middlewares/authMiddleware');
 const authController = require('../controllers/authController');
+const OTPcontroller =require('../controllers/OTPcontroller')
 const { 
   registerSchema,
   loginSchema,
@@ -19,6 +20,7 @@ router.post('/register', validate(registerSchema), authController.register);
 // @access  Public
 router.post('/login', validate(loginSchema), authController.login);
 router.post('/', validate(loginSchema), authController.login);
-
+router.post('/send-otp', OTPcontroller.sendOTP);
+router.post('/verify-otp', OTPcontroller.verifyOTP);
 
 module.exports = router;

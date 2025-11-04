@@ -13,7 +13,8 @@ module.exports = function(sequelize, DataTypes) {
       references: {
         model: 'Account',
         key: 'account_id'
-      }
+      },
+      unique: "userprofiles_account_unique"
     },
     full_name: {
       type: DataTypes.STRING(200),
@@ -54,6 +55,10 @@ module.exports = function(sequelize, DataTypes) {
       type: DataTypes.STRING(20),
       allowNull: true,
       unique: "uq_cccd"
+    },
+    avatar_url: {
+      type: DataTypes.STRING(255),
+      allowNull: true
     }
   }, {
     sequelize,
@@ -95,6 +100,13 @@ module.exports = function(sequelize, DataTypes) {
         unique: true,
         fields: [
           { name: "staff_code" },
+        ]
+      },
+      {
+        name: "userprofiles_account_unique",
+        unique: true,
+        fields: [
+          { name: "account_id" },
         ]
       },
     ]
