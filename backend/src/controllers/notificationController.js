@@ -13,6 +13,7 @@ exports.createNotification = async (accountId, message) => {
         await Notification.create({
             account_id: accountId,
             message: message.trim(),
+            hoso_id: hoso_id || null,
             is_read: false
         });
 
@@ -35,7 +36,7 @@ exports.getNotifications = async (req, res) => {
             order: [['created_at', 'DESC']],
             limit: parseInt(limit),
             offset,
-            attributes: ['notification_id', 'message', 'is_read', 'created_at']
+            attributes: ['notification_id', 'message', 'is_read', 'created_at','hoso_id']
         });
 
         res.status(200).json({
@@ -67,7 +68,7 @@ exports.getUnreadNotifications = async (req, res) => {
             Notification.findAll({
                 where: { account_id: accountId, is_read: false },
                 order: [['created_at', 'DESC']],
-                attributes: ['notification_id', 'message', 'created_at']
+                attributes: ['notification_id', 'message', 'created_at','hoso_id']
             }),
             Notification.count({ where: { account_id: accountId, is_read: false } })
         ]);
@@ -104,7 +105,8 @@ exports.markAsRead = async (req, res) => {
             where: {
                 notification_id: notificationId,
                 account_id: accountId
-            }
+            },
+            attributes: ['notification_id', 'is_read', 'hoso_id']
         });
 
         if (!notification) {
@@ -126,7 +128,7 @@ exports.markAsRead = async (req, res) => {
         res.status(200).json({
             success: true,
             message: 'Đánh dấu đã đọc thành công.',
-            data: notification
+            data: { notification_id: notification.notification_id, hoso_id: notification.hoso_id }
         });
     } catch (error) {
         console.error('Lỗi khi đánh dấu đã đọc:', error);

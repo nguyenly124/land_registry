@@ -28,6 +28,14 @@ module.exports = function(sequelize, DataTypes) {
       type: DataTypes.DATE,
       allowNull: true,
       defaultValue: Sequelize.Sequelize.literal('CURRENT_TIMESTAMP')
+    },
+    hoso_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'HoSo',
+        key: 'hoso_id'
+      }
     }
   }, {
     sequelize,
@@ -41,6 +49,12 @@ module.exports = function(sequelize, DataTypes) {
         unique: true,
         fields: [
           { name: "notification_id" },
+        ]
+      },
+      {
+        name: "idx_notification_hoso_id",
+        fields: [
+          { name: "hoso_id" },
         ]
       },
     ]

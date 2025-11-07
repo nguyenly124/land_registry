@@ -41,6 +41,10 @@ module.exports = function(sequelize, DataTypes) {
       type: DataTypes.DATE,
       allowNull: true,
       defaultValue: Sequelize.Sequelize.literal('CURRENT_TIMESTAMP')
+    },
+    receiver_info: {
+      type: DataTypes.JSONB,
+      allowNull: true
     }
   }, {
     sequelize,
@@ -54,6 +58,18 @@ module.exports = function(sequelize, DataTypes) {
         unique: true,
         fields: [
           { name: "hoso_id" },
+        ]
+      },
+      {
+        name: "idx_hoso_receiver_info",
+        fields: [
+          { name: "receiver_info" },
+        ]
+      },
+      {
+        name: "idx_hoso_type",
+        fields: [
+          { name: "type" },
         ]
       },
     ]

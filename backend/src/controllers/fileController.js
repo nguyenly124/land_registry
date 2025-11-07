@@ -41,7 +41,7 @@ exports.uploadDocument = async (req, res) => {
           })
         )
       );
-
+      
       res.status(201).json({
         message: 'Tải tài liệu lên thành công.',
         data: documents

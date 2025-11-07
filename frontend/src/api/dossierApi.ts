@@ -1,7 +1,7 @@
 // dossierApi.ts - Viết lại kết nối API dựa trên controller
 import axiosClient from './axiosClient';
 import type {
-  SubmitHoSoRequest, UpdateHoSoRequest, ApproveHoSoRequest, CancelHoSoRequest,
+  SubmitHoSoRequest, UpdateHoSoRequest, ApproveHoSoRequest, CancelHoSoRequest, GetHistoryResponse,
   HoSoResponse, HoSoListResponse
 } from './types';
 
@@ -16,6 +16,16 @@ export const dossierApi = {
       .get<HoSoListResponse>('/dossier/getall', { params }) 
       .then(r => r.data),
 
+  getHistory: async (
+    hoso_id: string,
+    page = 1,
+    limit = 10
+  ): Promise<GetHistoryResponse> => {
+    const response = await axiosClient.get(`/dossier/history/${hoso_id}`, {
+      params: { page, limit },
+    });
+    return response.data;
+  },
   // Lấy hồ sơ theo ID - GET /dossiers/:id
   getdetail: (id: string) =>
     axiosClient.get<HoSoResponse>(`/dossier/getdetail/${id}`).then(r => r.data),
@@ -30,7 +40,7 @@ export const dossierApi = {
 
   approve: (hosoId: string) => axiosClient.patch(`/dossier/${hosoId}/approve`),
   reject: (hosoId: string, reason: string) => axiosClient.patch(`/dossier/${hosoId}/reject`, { reason }),
-  requestSupplement: (hosoId: string, note: string) => axiosClient.patch(`/dossier/${hosoId}/supplement`, { note }),
+  requestSupplement: (hosoId: string, reason: string) => axiosClient.patch(`/dossier/${hosoId}/supplement`, { reason }),
   confirmProcessing: (hosoId: string) => axiosClient.patch(`/dossier/${hosoId}/confirm`),
   // Tìm kiếm hồ sơ - GET /dossiers/search
   search: (params: {

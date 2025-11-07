@@ -140,7 +140,7 @@ export interface CreateStaffRequest {
 
 // === LAND ===
 export interface LandParcel {
-  parcel_id: string; 
+  parcel_id: number; 
   parcel_code: string;
   address: string;
   area: number;
@@ -234,9 +234,39 @@ export interface HoSo {
     uploaded_at:string;
   }[];
 }
+// src/api/types.ts
+export interface HoSoHistory {
+  history_id: number;
+  hoso_id: number;
+  old_status: string | null;
+  new_status: string;
+  action: string;
+  actor_id: number;
+  note: string;
+  created_at: string;
+  actor: {
+    username: string;
+    UserProfile: {
+      full_name: string;
+    };
+  };
+}
+export interface GetHistoryResponse {
+  message: string;
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  data: HoSoHistory[];
+}
 export interface SubmitHoSoRequest {
   type: string;
   parcelId?: string;
+  receiver_info?: {
+    full_name: string;
+    id_number: string;
+    phone: string;
+    address: string;
+  };
 }
 export interface HoSoResponse {
   message: string;
@@ -276,6 +306,7 @@ export interface Notification {
   notification_id: number;
   message: string;
   is_read: boolean;
+  hoso_id: number;
   created_at: string;
 }
 

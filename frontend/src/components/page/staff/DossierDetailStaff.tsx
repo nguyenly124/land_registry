@@ -111,7 +111,7 @@ export default function DossierDetailStaff() {
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-8">
       <Header dossierId={dossier.hoso_id} />
-      <StatusBadge status={dossier.status} />
+      <StatusBadge dossier={dossier} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

@@ -44,6 +44,8 @@ function initModels(sequelize) {
   HoSo.hasMany(HoSoDocument, { as: "HoSoDocuments", foreignKey: "hoso_id"});
   HoSoHistory.belongsTo(HoSo, { as: "hoso", foreignKey: "hoso_id"});
   HoSo.hasMany(HoSoHistory, { as: "HoSoHistories", foreignKey: "hoso_id"});
+  Notification.belongsTo(HoSo, { as: "hoso", foreignKey: "hoso_id"});
+  HoSo.hasMany(Notification, { as: "Notifications", foreignKey: "hoso_id"});
   HoSo.belongsTo(LandParcel, { as: "parcel", foreignKey: "parcel_id"});
   LandParcel.hasMany(HoSo, { as: "HoSos", foreignKey: "parcel_id"});
 

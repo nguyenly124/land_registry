@@ -11,9 +11,15 @@ const customMessages = {
 
 // Schema cho chức năng Nộp hồ sơ mới
 exports.submitFileSchema = Joi.object({
-  type: Joi.string().trim().max(100).required().messages(customMessages).label('Loại hồ sơ'),
-  parcelId: Joi.number().integer().allow(null).messages(customMessages).label('Mã thửa đất'),
-}).messages(customMessages);
+  type: Joi.string().valid('Đăng ký sử dụng', 'Chuyển nhượng').required(),
+  parcelId: Joi.number().integer().optional(),
+  receiver_info: Joi.object({ // THÊM DÒNG NÀY
+    full_name: Joi.string().required(),
+    id_number: Joi.string().required(),
+    phone: Joi.string().required(),
+    address: Joi.string().required()
+  }).optional()
+});
 
 // Schema cho chức năng Duyệt hồ sơ
 exports.approveHoSoSchema = Joi.object({

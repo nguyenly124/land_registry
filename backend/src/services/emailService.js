@@ -64,44 +64,67 @@ const sendOTP = async (email, otp) => {
   return await sendEmail(email, subject, html);
 };
 
-const createAndNotify = async (io, accountId, message, sendEmailTo = null) => {
+const createAndNotify = async (io, accountId, message, hoso_id = null, sendEmailTo = null) => {
   try {
-    // 1. Tạo thông báo trong DB
+    // 1. Tạo thông báo trong DB (có hoso_id)
     const notification = await Notification.create({
       account_id: accountId,
       message: message.trim(),
-      is_read: false,
-      created_at: new Date(),
+      hoso_id: hoso_id || null
     });
 
-    // 2. Gửi real-time nếu user online
+    // 2. Gửi Socket.IO realtime
     const payload = {
       notification_id: notification.notification_id,
       message: notification.message,
-      created_at: notification.created_at,
-      is_read: false
+      is_read: false,
+      created_at: notification.created_at.toISOString(),
+      hoso_id: notification.hoso_id // GỬI hoso_id
     };
-
     io.to(`user_${accountId}`).emit('new_notification', payload);
 
     // 3. Gửi email (nếu có)
-    if (sendEmailTo && sendEmailTo.email && sendEmailTo.name) {
-      const subject = 'Thông báo mới từ hệ thống';
+    if (sendEmailTo?.email && sendEmailTo?.name) {
+      const profile = await UserProfile.findOne({ where: { account_id: accountId } });
+      const fullName = profile?.full_name || sendEmailTo.name;
+      const link = hoso_id 
+        ? `${process.env.CLIENT_URL}/dossier/${hoso_id}` 
+        : process.env.CLIENT_URL;
+
+      const subject = 'Thông báo mới từ Hệ thống Quản lý Đất đai';
       const html = `
-        <div style="font-family: Arial; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
-          <h3>Xin chào <strong>${sendEmailTo.name}</strong>,</h3>
-          <p><strong>Thông báo mới:</strong></p>
-          <blockquote style="background: #f9f9f9; padding: 15px; border-left: 4px solid #1a73e8;">
-            ${message}
-          </blockquote>
-          <p><a href="${process.env.CLIENT_URL}" style="color: #1a73e8;">Xem chi tiết tại đây</a></p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #eee; border-radius: 12px; background: #f9f9f9;">
+          <h2 style="color: #1a73e8; margin-bottom: 10px;">Thông báo mới</h2>
+          <p>Xin chào <strong>${fullName}</strong>,</p>
+          
+          <div style="background: white; padding: 16px; border-radius: 8px; border-left: 4px solid #1a73e8; margin: 16px 0;">
+            <p style="margin: 0; font-size: 15px;"><strong>Nội dung:</strong></p>
+            <p style="margin: 8px 0 0; color: #333;">${message}</p>
+          </div>
+
+          ${hoso_id ? `
+            <p style="margin: 16px 0;">
+              <a href="${link}" style="background: #1a73e8; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                Xem hồ sơ #${hoso_id}
+              </a>
+            </p>
+          ` : ''}
+
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+          <p style="font-size: 12px; color: #777;">
+            Đây là email tự động. Vui lòng không trả lời.
+          </p>
         </div>
       `;
-      await sendEmail(sendEmailTo.email, subject, html).catch(console.error);
+
+      await sendEmail(sendEmailTo.email, subject, html).catch(err => 
+        console.error(`[Email] Gửi thất bại đến ${sendEmailTo.email}:`, err)
+      );
     }
+
     return notification;
   } catch (error) {
-    console.error('[Thông báo] Lỗi:', error);
+    console.error('[createAndNotify] Lỗi:', error);
     throw error;
   }
 };

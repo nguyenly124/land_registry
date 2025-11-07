@@ -4,7 +4,7 @@ import { dossierApi } from "../../api/dossierApi";
 import { fileApi } from "../../api/fileApi";
 import { landApi } from "../../api/landApi";
 import type { LandParcel, HoSo } from "../../api/types";
-import { X, Upload, AlertCircle, Loader2 } from "lucide-react";
+import { X, Upload, AlertCircle, Loader2, User, FileText } from "lucide-react";
 
 interface Props {
   onClose: () => void;
@@ -13,33 +13,42 @@ interface Props {
 
 export default function CreateDossierModal({ onClose, onSuccess }: Props) {
   const [type, setType] = useState("");
-  const [parcelId, setParcelId] = useState("");
+  const [parcelCode, setParcelCode] = useState(""); 
+  const [parcelId, setParcelId] = useState("");     
   const [files, setFiles] = useState<File[]>([]);
   const [parcels, setParcels] = useState<LandParcel[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  // Load thửa đất của người dùng
-  useEffect(() => {
-    const loadParcels = async () => {
-      try {
-        setLoading(true);
-        const res = await landApi.getAll();
-        setParcels(res.data);
-      } catch (err) {
-        alert("Lỗi tải danh sách thửa đất");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadParcels();
-  }, []);
+  // Thông tin người nhận (chuyển nhượng)
+  const [receiverName, setReceiverName] = useState("");
+  const [receiverIdNumber, setReceiverIdNumber] = useState("");
+  const [receiverPhone, setReceiverPhone] = useState("");
+  const [receiverAddress, setReceiverAddress] = useState("");
 
-  // Danh sách file bắt buộc theo loại hồ sơ
+  // Load thửa đất (chỉ dùng cho chuyển nhượng)
+  useEffect(() => {
+    if (type === "Chuyển nhượng") {
+      const loadParcels = async () => {
+        try {
+          setLoading(true);
+          const res = await landApi.getAll();
+          setParcels(res.data);
+        } catch (err) {
+          alert("Lỗi tải danh sách thửa đất");
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadParcels();
+    }
+  }, [type]);
+
+  // Danh sách file bắt buộc
   const requiredFiles = type === "Đăng ký sử dụng"
     ? ["Sổ đỏ", "CMND/CCCD"]
     : type === "Chuyển nhượng"
-    ? ["Hợp đồng chuyển nhượng", "CMND/CCCD", "Sổ đỏ"]
+    ? ["Hợp đồng chuyển nhượng", "CMND/CCCD người chuyển", "CMND/CCCD người nhận", "Sổ đỏ"]
     : [];
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,52 +58,77 @@ export default function CreateDossierModal({ onClose, onSuccess }: Props) {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!type) return alert("Vui lòng chọn loại hồ sơ");
-    if (files.length === 0) return alert("Vui lòng tải lên ít nhất 1 tài liệu");
+  e.preventDefault();
 
-    setUploading(true);
-    try {
-      // BƯỚC 1: TẠO HỒ SƠ
-      const hosoRes = await dossierApi.submit({
-        type,
-        parcelId: parcelId || undefined,
-      });
-      console.log(">>> Hồ sơ tạo xong:", hosoRes);
-      const hosoId = hosoRes.data.hoso_id;
-      console.log("id ho so:", hosoId);
-      // BƯỚC 2: UPLOAD FILE
-      const formData = new FormData();
-      files.forEach(file => formData.append('files', file));
-      formData.append('hoso_id', hosoId.toString());
+  if (!type) return alert("Vui lòng chọn loại hồ sơ");
+  if (files.length === 0) return alert("Vui lòng tải lên tài liệu");
 
-      // await fileApi.upload(formData);
-      console.log(">>> Bắt đầu upload file");
+  setUploading(true);
+  try {
+    let finalParcelId: number | undefined = undefined;
 
-      await fileApi.upload(formData);
+    // === ĐĂNG KÝ SỬ DỤNG: Tìm parcel_id từ parcel_code ===
+    if (type === "Đăng ký sử dụng") {
+      if (!parcelCode.trim()) {
+        return alert("Vui lòng nhập mã thửa đất");
+      }
+      
+      // Gọi API tìm thửa đất theo mã
+      const parcel = await landApi.searchid({ query: parcelCode.trim() });
 
-      console.log(">>> Upload thành công");
-      // THÀNH CÔNG
-      onSuccess(hosoRes.data);
-      onClose();
-      alert("Nộp hồ sơ và tài liệu thành công!");
+      if (!parcel) {
+        return alert(`Không tìm thấy thửa đất với mã: ${parcelCode}`);
+      }
 
-    } catch (err: any) {
-      const msg = err.response?.data?.message || "Lỗi khi xử lý hồ sơ";
-      alert(msg);
-    } finally {
-      setUploading(false);
+      finalParcelId = parcel.parcel_id;
     }
-  };
+    // === CHUYỂN NHƯỢNG: Dùng parcelId đã chọn ===
+    if (type === "Chuyển nhượng") {
+      if (!parcelId) return alert("Vui lòng chọn thửa đất");
+      finalParcelId = Number(parcelId);
+    }
+
+    // === TẠO PAYLOAD CHUNG ===
+    const payload: any = {
+      type,
+      parcelId: finalParcelId,
+    };
+
+    if (type === "Chuyển nhượng") {
+      payload.receiver_info = {
+        full_name: receiverName.trim(),
+        id_number: receiverIdNumber.trim(),
+        phone: receiverPhone.trim(),
+        address: receiverAddress.trim(),
+      };
+    }
+    const hosoRes = await dossierApi.submit(payload);
+    const hosoId = hosoRes.data.hoso_id;
+
+    // === UPLOAD FILE ===
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    formData.append('hoso_id', hosoId.toString());
+    await fileApi.upload(formData);
+
+    onSuccess(hosoRes.data);
+    onClose();
+    alert("Nộp hồ sơ thành công!");
+
+  } catch (err: any) {
+    const msg = err.response?.data?.message || "Lỗi khi xử lý hồ sơ";
+    alert(msg);
+  } finally {
+    setUploading(false);
+  }
+};
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-2xl font-bold text-blue-900">Tạo hồ sơ mới</h3>
-          <button 
-            aria-label="create"
-            onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button aria-label="close" onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -108,7 +142,15 @@ export default function CreateDossierModal({ onClose, onSuccess }: Props) {
             <select
               aria-label="type"
               value={type}
-              onChange={(e) => setType(e.target.value)}
+              onChange={(e) => {
+                setType(e.target.value);
+                setParcelCode("");
+                setParcelId("");
+                setReceiverName("");
+                setReceiverIdNumber("");
+                setReceiverPhone("");
+                setReceiverAddress("");
+              }}
               className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
               required
             >
@@ -119,28 +161,119 @@ export default function CreateDossierModal({ onClose, onSuccess }: Props) {
           </div>
 
           {/* THỬA ĐẤT */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Thửa đất (tùy chọn)
-            </label>
-            {loading ? (
-              <div className="px-4 py-2.5 text-gray-500">Đang tải...</div>
-            ) : (
-              <select
-                aria-label="loading"
-                value={parcelId}
-                onChange={(e) => setParcelId(e.target.value)}
-                className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              >
-                <option value="">-- Không chọn thửa đất --</option>
-                {parcels.map(p => (
-                  <option key={p.parcel_id} value={p.parcel_id}>
-                    {p.parcel_code} - {p.address}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
+          {type === "Đăng ký sử dụng" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Mã thửa đất <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <FileText className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={parcelCode}
+                  onChange={(e) => setParcelCode(e.target.value)}
+                  placeholder="VD: ABC-123-XYZ"
+                  className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  required
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Nhập chính xác mã thửa đất cần đăng ký</p>
+            </div>
+          )}
+
+          {type === "Chuyển nhượng" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Thửa đất chuyển nhượng <span className="text-red-500">*</span>
+              </label>
+              {loading ? (
+                <div className="px-4 py-2.5 text-gray-500">Đang tải danh sách thửa đất...</div>
+              ) : (
+                <select
+                  aria-label="land"
+                  value={parcelId}
+                  onChange={(e) => setParcelId(e.target.value)}
+                  className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  required
+                >
+                  <option value="">-- Chọn thửa đất --</option>
+                  {parcels.map(p => (
+                    <option key={p.parcel_id} value={p.parcel_id}>
+                      {p.parcel_code} - {p.address} (Diện tích: {p.area} m²)
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+
+          {/* THÔNG TIN NGƯỜI NHẬN (CHUYỂN NHƯỢNG) */}
+          {type === "Chuyển nhượng" && (
+            <div className="space-y-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <User className="w-5 h-5 text-blue-700" />
+                <h4 className="font-semibold text-blue-900">Thông tin người nhận chuyển nhượng</h4>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Họ và tên <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={receiverName}
+                    onChange={(e) => setReceiverName(e.target.value)}
+                    placeholder="Nguyễn Văn B"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    CMND/CCCD <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={receiverIdNumber}
+                    onChange={(e) => setReceiverIdNumber(e.target.value)}
+                    placeholder="123456789"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Số điện thoại <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={receiverPhone}
+                    onChange={(e) => setReceiverPhone(e.target.value)}
+                    placeholder="0901234567"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Địa chỉ <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={receiverAddress}
+                    onChange={(e) => setReceiverAddress(e.target.value)}
+                    placeholder="123 Đường ABC, Quận 1, TP.HCM"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* TẢI FILE */}
           <div>
@@ -167,14 +300,13 @@ export default function CreateDossierModal({ onClose, onSuccess }: Props) {
               </p>
             </div>
 
-            {/* DANH SÁCH FILE */}
             {files.length > 0 && (
               <div className="mt-3 space-y-1">
                 {files.map((file, i) => (
                   <div key={i} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded">
                     <span className="truncate max-w-xs">{file.name}</span>
                     <button
-                      aria-label="filename"
+                      aria-label="file"
                       type="button"
                       onClick={() => setFiles(files.filter((_, idx) => idx !== i))}
                       className="text-red-500 hover:text-red-700"
@@ -186,7 +318,6 @@ export default function CreateDossierModal({ onClose, onSuccess }: Props) {
               </div>
             )}
 
-            {/* YÊU CẦU FILE */}
             {requiredFiles.length > 0 && (
               <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2 text-sm">
                 <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />

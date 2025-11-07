@@ -19,6 +19,7 @@ router.post('/', authMiddleware, validate(createLandSchema), landController.crea
 router.put('/:id', authMiddleware, validate(editLandSchema), landController.updateLand);
 router.get('/search',authMiddleware,validate(searchSchema),landController.getLandsByUser);
 router.get('/',authMiddleware,landController.getAllLands);
+router.get('/searchid', authMiddleware, landController.searchid);
 router.get('/:id',authMiddleware,landController.getLandById);
 
 module.exports = router;

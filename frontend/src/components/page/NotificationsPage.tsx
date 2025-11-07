@@ -5,6 +5,8 @@ import { io, Socket } from "socket.io-client";
 import { notificationApi } from "../../api";
 import type { Notification } from "../../api";
 import { formatDate } from "../../../utils/date";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/authContext";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -16,8 +18,47 @@ export default function NotificationsPage() {
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [marking, setMarking] = useState<Set<number>>(new Set());
   const socketRef = useRef<Socket | null>(null);
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   const LIMIT = 15;
+  const userRole = user?.role; // 'Cán bộ' | 'Người dân'
+
+  // === XỬ LÝ CLICK THÔNG BÁO ===
+  const handleNotificationClick = async (notif: Notification) => {
+    if (!notif.hoso_id) return;
+
+    // 1. Đánh dấu đã đọc nếu chưa đọc
+    if (!notif.is_read) {
+      setMarking((prev) => new Set(prev).add(notif.notification_id));
+      try {
+        await notificationApi.markAsRead(notif.notification_id);
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.notification_id === notif.notification_id
+              ? { ...n, is_read: true }
+              : n
+          )
+        );
+      } catch (error) {
+        console.error("Lỗi đánh dấu đã đọc:", error);
+      } finally {
+        setMarking((prev) => {
+          const next = new Set(prev);
+          next.delete(notif.notification_id);
+          return next;
+        });
+      }
+    }
+
+    // 2. Chuyển trang theo role
+    const path =
+      userRole === "Cán bộ"
+        ? `/dossierstaff/${notif.hoso_id}`
+        : `/dossier/${notif.hoso_id}`;
+
+    navigate(path);
+  };
 
   // === LẤY THÔNG BÁO ===
   const fetchNotifications = useCallback(
@@ -27,9 +68,10 @@ export default function NotificationsPage() {
         const res = await notificationApi.getNotifications(pageNum, LIMIT);
 
         const newNotifs = res.data;
-        const filtered = filter === "unread" 
-          ? newNotifs.filter((n: Notification) => !n.is_read)
-          : newNotifs;
+        const filtered =
+          filter === "unread"
+            ? newNotifs.filter((n: Notification) => !n.is_read)
+            : newNotifs;
 
         setNotifications((prev) => (append ? [...prev, ...filtered] : filtered));
         setHasMore(res.pagination.page < res.pagination.totalPages);
@@ -50,9 +92,13 @@ export default function NotificationsPage() {
   // === SOCKET.IO REALTIME ===
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!token || !user) return;
 
-    const socket = io(API_URL, { autoConnect: false, transports: ["websocket"] });
+    const socket = io(API_URL, {
+      autoConnect: false,
+      transports: ["websocket"],
+    });
+
     socket.auth = { token };
     socket.connect();
 
@@ -68,10 +114,12 @@ export default function NotificationsPage() {
     });
 
     socketRef.current = socket;
-    return () => { socket.disconnect(); };
-  }, [filter]);
+    return () => {
+      socket.disconnect();
+    };
+  }, [filter, user]);
 
-  // === ĐÁNH DẤU ĐÃ ĐỌC ===
+  // === ĐÁNH DẤU ĐÃ ĐỌC (NÚT RIÊNG) ===
   const markAsRead = async (id: number) => {
     setMarking((prev) => new Set(prev).add(id));
     try {
@@ -181,13 +229,16 @@ export default function NotificationsPage() {
           notifications.map((notif) => (
             <div
               key={notif.notification_id}
-              className={`p-4 rounded-lg border transition-all ${
-                notif.is_read ? "bg-white border-gray-200" : "bg-blue-50 border-blue-200"
-              } hover:shadow-md`}
+              onClick={() => handleNotificationClick(notif)}
+              className={`p-4 rounded-lg border transition-all cursor-pointer hover:shadow-lg ${
+                notif.is_read
+                  ? "bg-white border-gray-200 hover:border-gray-300"
+                  : "bg-blue-50 border-blue-200 hover:border-blue-300"
+              }`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-600">{notif.message}</p>
+                  <p className="text-sm text-gray-800 font-medium">{notif.message}</p>
                   <p className="text-xs text-gray-500 mt-2">
                     {formatDate(notif.created_at)}
                   </p>
@@ -196,7 +247,10 @@ export default function NotificationsPage() {
                 <div className="flex items-center gap-3 ml-4">
                   {!notif.is_read && (
                     <button
-                      onClick={() => markAsRead(notif.notification_id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        markAsRead(notif.notification_id);
+                      }}
                       disabled={marking.has(notif.notification_id)}
                       className="text-xs text-blue-600 hover:text-blue-700 disabled:opacity-50"
                     >
@@ -204,7 +258,10 @@ export default function NotificationsPage() {
                     </button>
                   )}
                   <button
-                    onClick={() => deleteNotification(notif.notification_id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteNotification(notif.notification_id);
+                    }}
                     className="text-xs text-red-600 hover:text-red-700"
                   >
                     Xóa

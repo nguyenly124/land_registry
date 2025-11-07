@@ -181,6 +181,32 @@ exports.getLandsByUser = async (req, res) => {
   }
 };
 
+exports.searchid = async (req, res) => {
+  try {
+    const { query } = req.query;
+
+    if (!query || query.trim() === "") {
+      return res.status(400).json({ message: "query rỗng" });
+    }
+
+    const parcel = await LandParcel.findOne({
+      where: {
+        parcel_code: { [Op.iLike]: `%${query}%` } 
+      }
+    });
+
+    if (!parcel) {
+      return res.status(404).json({ message: "Không tìm thấy thửa đất" });
+    }
+
+    res.json(parcel);
+
+  } catch (err) {
+    console.error("Search error:", err);
+    res.status(500).json({ message: "Lỗi server" });
+  }
+};
+
 // === [PATCH] Cập nhật thửa đất (Cán bộ) ===
 exports.updateLand = async (req, res) => {
   try {

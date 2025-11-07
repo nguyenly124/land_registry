@@ -17,201 +17,367 @@ const logHistory = async (hoso_id, old_status, new_status, action, actor_id, not
 };
 // Chức năng Nộp hồ sơ mới
 exports.submitHoSo = async (req, res) => {
-    const io = req.app.get('io');
-    try {
-        const { type, parcelId } = req.body;
-        const { id: accountId, role } = req.user; 
+  let t;
+  const io = req.app.get('io');
+  try {
+    t = await sequelize.transaction();
 
-        // Nếu có parcelId thì kiểm tra xem thửa đất tồn tại không
-        let parcel = null;
-        if (parcelId) {
-            parcel = await LandParcel.findByPk(parcelId);
-            if (!parcel) {
-                return res.status(404).json({ message: 'Không tìm thấy thửa đất.' });
-            }
+    // 1. LẤY ĐẦY ĐỦ DỮ LIỆU
+    const { type, parcelId, receiver_info } = req.body;
+    const { id: accountId, role } = req.user;
 
-            // Nếu người dân nộp hồ sơ thì phải là chủ sở hữu thửa đất đó
-            if (role === 'Người dân' && parcel.owner_id !== accountId) {
-                return res.status(403).json({ message: 'Bạn không có quyền nộp hồ sơ cho thửa đất này.' });
-            }
-        }
-
-        // Tạo mới hồ sơ
-        const newHoSo = await HoSo.create({
-            account_id: accountId,
-            parcel_id: parcelId || null,
-            type: type.trim(),
-            status: 'Chờ xử lý'
-        });
-        emit('hoso.submitted', {
-        io,
-        accountId,
-        type: newHoSo.type,
-        hosoId: newHoSo.hoso_id,
-        parcelId: newHoSo.parcel_id
-        });
-        res.status(201).json({
-            message: 'Nộp hồ sơ thành công.',
-            data: newHoSo
-        });
-
-    } catch (error) {
-        console.error('Lỗi khi nộp hồ sơ:', error);
-        res.status(500).json({ message: 'Đã có lỗi xảy ra. Vui lòng thử lại.' });
+    // 2. VALIDATE LOẠI HỒ SƠ
+    if (!type || !['Đăng ký sử dụng', 'Chuyển nhượng'].includes(type)) {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: 'Loại hồ sơ không hợp lệ.' });
     }
+
+    // 3. KIỂM TRA THỬA ĐẤT (nếu có)
+    let finalParcelId = null;
+    if (parcelId) {
+      const parcel = await LandParcel.findByPk(parcelId, { transaction: t });
+      if (!parcel) {
+        await t.rollback();
+        return res.status(404).json({ success: false, message: 'Không tìm thấy thửa đất.' });
+      }
+
+      // KIỂM TRA QUYỀN (nếu cần)
+      // if (role === 'Người dân' && parcel.owner_id !== accountId) {
+      //   await t.rollback();
+      //   return res.status(403).json({ success: false, message: 'Bạn không phải chủ sở hữu thửa đất này.' });
+      // }
+      finalParcelId = parcelId;
+    }
+
+    // 4. VALIDATE CHUYỂN NHƯỢNG
+    if (type === 'Chuyển nhượng') {
+      if (!receiver_info ||
+          !receiver_info.full_name?.trim() ||
+          !receiver_info.id_number?.trim() ||
+          !receiver_info.phone?.trim() ||
+          !receiver_info.address?.trim()) {
+        await t.rollback();
+        return res.status(400).json({ success: false, message: 'Vui lòng cung cấp đầy đủ thông tin người nhận chuyển nhượng.' });
+      }
+    }
+
+    // 5. TẠO HỒ SƠ
+    const newHoSo = await HoSo.create({
+      account_id: accountId,
+      parcel_id: finalParcelId,
+      type: type.trim(),
+      status: 'Chờ xử lý',
+      receiver_info: type === 'Chuyển nhượng' ? receiver_info : null
+    }, { transaction: t });
+
+    // 6. GHI LỊCH SỬ
+    await logHistory(
+      newHoSo.hoso_id,
+      null,
+      'Chờ xử lý',
+      'Nộp hồ sơ mới',
+      accountId,
+      `Loại: ${type} | Thửa: ${finalParcelId || 'Không có'}`,
+      t
+    );
+
+    await t.commit();
+
+    // 7. GỬI THÔNG BÁO
+    emit('hoso.submitted', {
+      io,
+      accountId,
+      type: newHoSo.type,
+      hosoId: newHoSo.hoso_id,
+      parcelId: newHoSo.parcel_id
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Nộp hồ sơ thành công.',
+      data: newHoSo
+    });
+
+  } catch (error) {
+    if (t) await t.rollback();
+    console.error('Lỗi nộp hồ sơ:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server.' });
+  }
 };
 
 // ===  Cán bộ xác nhận xử lý hồ sơ ===
 exports.confirmProcessing = async (req, res) => {
-  const io = req.app.get('io');
+  const t = await sequelize.transaction();
   try {
-    const { hosoId } = req.params;
-    const canBoId = req.user.id;
+    const { hoso_id } = req.params;
+    const actor_id = req.user.id;
 
-    if (req.user.role !== 'Cán bộ') {
-      return res.status(403).json({ message: 'Chỉ cán bộ mới được xác nhận xử lý.' });
+    const hoso = await HoSo.findByPk(hoso_id, { transaction: t });
+    if (!hoso) {
+      await t.rollback();
+      return res.status(404).json({ message: 'Hồ sơ không tồn tại.' });
     }
 
-    const hoso = await HoSo.findByPk(hosoId);
-    if (!hoso) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
     if (hoso.status !== 'Chờ xử lý') {
+      await t.rollback();
       return res.status(400).json({ message: 'Hồ sơ không ở trạng thái chờ xử lý.' });
     }
 
-    await hoso.update({
-      status: 'Đang xử lý',
-      assigned_to: canBoId,
-      updated_at: new Date()
-    });
+    const oldStatus = hoso.status;
+    await hoso.update({ status: 'Đang xử lý' }, { transaction: t });
 
-    // Gửi thông báo
-    emit('hoso.processing', {
-      io,
-      accountId: hoso.account_id,
-      hosoId: hoso.hoso_id,
-      canBoId
-    });
+    await logHistory(hoso_id, oldStatus, 'Đang xử lý', 'Xác nhận xử lý', actor_id, null, t);
 
-    res.status(200).json({
-      success: true,
-      message: 'Hồ sơ đã được xác nhận xử lý.',
-      data: hoso
-    });
+    await t.commit();
+    res.status(200).json({ success: true, message: 'Xác nhận xử lý thành công.' });
+
   } catch (error) {
+    await t.rollback();
     console.error('Lỗi xác nhận xử lý:', error);
-    res.status(500).json({ success: false, message: 'Lỗi server.' });
+    res.status(500).json({ success: false, message: 'Đã có lỗi xảy ra.' });
   }
 };
 
 // ===  Yêu cầu bổ sung tài liệu ===
 exports.requestSupplement = async (req, res) => {
+  let t;
   const io = req.app.get('io');
   try {
+    t = await sequelize.transaction();
     const { hosoId } = req.params;
-    const { note } = req.body;
+    const { reason } = req.body;
+    const actor_id = req.user.id;
+    const { role } = req.user;
 
-    if (!note?.trim()) {
+    if (role !== 'Cán bộ') {
+      await t.rollback();
+      return res.status(403).json({ message: 'Chỉ cán bộ mới được yêu cầu bổ sung.' });
+    }
+
+    if (!reason?.trim()) {
+      await t.rollback();
       return res.status(400).json({ message: 'Vui lòng nhập nội dung yêu cầu bổ sung.' });
     }
 
-    const hoso = await HoSo.findByPk(hosoId);
-    if (!hoso) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+    const hoso = await HoSo.findByPk(hosoId, { transaction: t });
+    if (!hoso) {
+      await t.rollback();
+      return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+    }
 
+    if (!['Chờ xử lý', 'Đang xử lý'].includes(hoso.status)) {
+      await t.rollback();
+      return res.status(400).json({ message: 'Chỉ yêu cầu bổ sung khi hồ sơ đang chờ hoặc đang xử lý.' });
+    }
+
+    const oldStatus = hoso.status;
     await hoso.update({
       status: 'Đang xử lý',
-      supplement_note: note.trim(),
+      supplement_note: reason.trim(),
       updated_at: new Date()
-    });
+    }, { transaction: t });
+
+    await logHistory(hosoId, oldStatus, 'Đang xử lý', 'Yêu cầu bổ sung tài liệu', actor_id, reason.trim(), t);
+
+    await t.commit();
 
     emit('hoso.supplement_requested', {
       io,
       accountId: hoso.account_id,
       hosoId: hoso.hoso_id,
-      note
+      reason: reason.trim()
     });
 
     res.status(200).json({
       success: true,
-      message: 'Yêu cầu bổ sung đã được gửi.',
-      data: hoso
+      message: 'Yêu cầu bổ sung đã được gửi thành công.',
+      data: { hoso_id: hoso.hoso_id, supplement_note: hoso.supplement_note }
     });
+
   } catch (error) {
+    if (t) await t.rollback();
     console.error('Lỗi yêu cầu bổ sung:', error);
-    res.status(500).json({ success: false, message: 'Lỗi server.' });
+    res.status(500).json({ success: false, message: 'Đã có lỗi xảy ra.' });
   }
 };
 
 // ===  Duyệt hồ sơ ===
 exports.approveHoSo = async (req, res) => {
+  let t;
   const io = req.app.get('io');
   try {
+    t = await sequelize.transaction();
     const { hosoId } = req.params;
+    const { note } = req.body;
+    const actor_id = req.user.id;
 
-    const hoso = await HoSo.findByPk(hosoId);
-    if (!hoso) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
-    if (!['Chờ xử lý','Đang xử lý'].includes(hoso.status)) {
-      return res.status(400).json({ message: 'Hồ sơ không thể duyệt.' });
-    }
-
-    await hoso.update({
-      status: 'Đã duyệt',
-      processed_by: req.user.id,
-      processed_at: new Date()
+    // 1. TÌM HỒ SƠ
+    const hoso = await HoSo.findByPk(hosoId, {
+      include: [
+        { model: LandParcel, as: 'parcel' },
+        { model: Account, as: 'account', include: [UserProfile] }
+      ],
+      transaction: t
     });
 
+    if (!hoso) {
+      await t.rollback();
+      return res.status(404).json({ success: false, message: 'Hồ sơ không tồn tại.' });
+    }
+
+    if (!['Chờ xử lý', 'Đang xử lý'].includes(hoso.status)) {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: 'Hồ sơ không thể duyệt ở trạng thái hiện tại.' });
+    }
+
+    const oldStatus = hoso.status;
+    let certificateNumber = null;
+    let newOwnerId = null;
+
+    // === XỬ LÝ THEO LOẠI HỒ SƠ ===
+    if (hoso.type === 'Chuyển nhượng' && hoso.receiver_info) {
+      // === CHUYỂN NHƯỢNG ===
+      const { full_name, id_number, phone, address, email } = hoso.receiver_info;
+
+      if (!full_name || !id_number || !phone || !address) {
+        await t.rollback();
+        return res.status(400).json({ success: false, message: 'Thông tin người nhận không đầy đủ.' });
+      }
+
+      // Tìm hoặc tạo tài khoản người nhận
+      let receiverAccount = await Account.findOne({ where: { username: id_number }, transaction: t });
+      if (!receiverAccount) {
+        receiverAccount = await Account.create({
+          username: id_number,
+          password: await bcrypt.hash(id_number, 10),
+          role: 'Người dân'
+        }, { transaction: t });
+
+        await UserProfile.create({
+          account_id: receiverAccount.account_id,
+          full_name,
+          phone,
+          email: email || null
+        }, { transaction: t });
+      }
+
+      newOwnerId = receiverAccount.account_id;
+      certificateNumber = `GCN-${hosoId}-${Date.now().toString().slice(-6)}`;
+
+      await logHistory(
+        hosoId,
+        oldStatus,
+        'Đã duyệt',
+        'Chuyển nhượng thành công',
+        actor_id,
+        `→ Chủ mới: ${full_name} (CMND: ${id_number})\nGCN: ${certificateNumber}`,
+        t
+      );
+
+    } else if (hoso.type === 'Đăng ký sử dụng') {
+      // === ĐĂNG KÝ SỬ DỤNG ===
+      newOwnerId = hoso.account_id; 
+      certificateNumber = `GCN-${hosoId}-${Date.now().toString().slice(-6)}`;
+
+      await logHistory(
+        hosoId,
+        oldStatus,
+        'Đã duyệt',
+        'Cấp GCN quyền sử dụng đất',
+        actor_id,
+        `Chủ sở hữu: ${hoso.account.UserProfile.full_name}\nGCN: ${certificateNumber}`,
+        t
+      );
+    }
+    if (hoso.parcel_id && newOwnerId) {
+      await LandParcel.update(
+        { owner_id: newOwnerId },
+        { where: { parcel_id: hoso.parcel_id }, transaction: t }
+      );
+    }
+    await hoso.update({ status: 'Đã duyệt' }, { transaction: t });
     emit('hoso.approved', {
       io,
       accountId: hoso.account_id,
       hosoId: hoso.hoso_id
     });
 
+    // Nếu là chuyển nhượng → gửi thêm cho người nhận
+    if (hoso.type === 'Chuyển nhượng' && hoso.receiver_info?.id_number) {
+      const receiverAcc = await Account.findOne({ where: { username: hoso.receiver_info.id_number }, transaction: t });
+      if (receiverAcc) {
+        emit('hoso.approved', {
+          io,
+          accountId: receiverAcc.account_id,
+          hosoId: hoso.hoso_id
+        });
+      }
+    }
+
+    await t.commit();
+
     res.status(200).json({
       success: true,
-      message: 'Hồ sơ đã được duyệt thành công!',
-      data: hoso
+      message: 'Duyệt hồ sơ thành công.',
+      data: {
+        hoso_id: hoso.hoso_id,
+        type: hoso.type,
+        certificate_number: certificateNumber,
+        new_owner_id: newOwnerId
+      }
     });
+
   } catch (error) {
+    if (t) await t.rollback();
     console.error('Lỗi duyệt hồ sơ:', error);
-    res.status(500).json({ success: false, message: 'Lỗi server.' });
+    res.status(500).json({ success: false, message: 'Đã có lỗi xảy ra.' });
   }
 };
 
 // ===  Từ chối hồ sơ ===
 exports.rejectHoSo = async (req, res) => {
-  const io = req.app.get('io');
+  const t = await sequelize.transaction();
   try {
     const { hosoId } = req.params;
-    const { reason } = req.body;
+    const { reason  } = req.body;
+    const actor_id = req.user.id;
 
-    if (!reason?.trim()) {
-      return res.status(400).json({ message: 'Vui lòng nhập lý do từ chối.' });
+    if (!reason ?.trim()) {
+      return res.status(400).json({ message: 'Vui lòng cung cấp lý do từ chối.' });
     }
 
-    const hoso = await HoSo.findByPk(hosoId);
-    if (!hoso) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+    const hoso = await HoSo.findByPk(hosoId, { transaction: t });
+    if (!hoso) {
+      await t.rollback();
+      return res.status(404).json({ message: 'Hồ sơ không tồn tại.' });
+    }
 
-    await hoso.update({
-      status: 'Từ chối',
-      reject_reason: reason.trim(),
-      processed_by: req.user.id,
-      processed_at: new Date()
-    });
+    if (!['Chờ xử lý', 'Đang xử lý'].includes(hoso.status)) {
+      await t.rollback();
+      return res.status(400).json({ message: 'Hồ sơ không thể từ chối ở trạng thái hiện tại.' });
+    }
 
-    emit('hoso.rejected', {
-      io,
-      accountId: hoso.account_id,
-      hosoId: hoso.hoso_id,
-      reason
-    });
+    const oldStatus = hoso.status;
+    await hoso.update({ status: 'Từ chối' }, { transaction: t });
 
-    res.status(200).json({
-      success: true,
-      message: 'Hồ sơ đã bị từ chối.',
-      data: hoso
-    });
+    // GHI LỊCH SỬ
+    await logHistory(
+      hosoId,
+      oldStatus,
+      'Từ chối',
+      'Từ chối hồ sơ',
+      actor_id,
+      reason ,
+      t
+    );
+
+    await t.commit();
+    res.status(200).json({ message: 'Từ chối hồ sơ thành công.' });
+
   } catch (error) {
+    await t.rollback();
     console.error('Lỗi từ chối hồ sơ:', error);
-    res.status(500).json({ success: false, message: 'Lỗi server.' });
+    res.status(500).json({ message: 'Đã có lỗi xảy ra.' });
   }
 };
 
@@ -237,24 +403,55 @@ exports.editHoSo = async (req, res) => {
 };
 // Chức năng Yêu cầu hủy hồ sơ
 exports.cancelHoSo = async (req, res) => {
-    try {
-        const { hosoId } = req.body;
-        const hoso = await HoSo.findByPk(hosoId);
+  const t = await sequelize.transaction();
+  try {
+    const { hoso_id } = req.params;
+    const { note } = req.body;
+    const { id: actor_id, role } = req.user;
 
-        if (!hoso) {
-            return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
-        }
+    const hoso = await HoSo.findByPk(hoso_id, {
+      include: [{ model: Account, attributes: ['role'] }],
+      transaction: t
+    });
 
-        if (hoso.status !== 'Chờ xử lý') {
-            return res.status(403).json({ message: 'Không thể hủy hồ sơ ở trạng thái này.' });
-        }
-
-        await hoso.update({ status: 'Từ chối', updated_at: new Date() });
-        res.status(200).json({ message: 'Hồ sơ đã được hủy thành công.', hoso });
-    } catch (error) {
-        console.error('Lỗi khi hủy hồ sơ:', error);
-        res.status(500).json({ message: 'Đã có lỗi xảy ra. Vui lòng thử lại.' });
+    if (!hoso) {
+      await t.rollback();
+      return res.status(404).json({ message: 'Hồ sơ không tồn tại.' });
     }
+
+    // Kiểm tra quyền hủy
+    if (role === 'Người dân' && hoso.account_id !== actor_id) {
+      await t.rollback();
+      return res.status(403).json({ message: 'Bạn không có quyền hủy hồ sơ này.' });
+    }
+
+    if (!['Chờ xử lý', 'Đang xử lý'].includes(hoso.status)) {
+      await t.rollback();
+      return res.status(400).json({ message: 'Chỉ có thể hủy hồ sơ ở trạng thái chờ hoặc đang xử lý.' });
+    }
+
+    const oldStatus = hoso.status;
+    await hoso.update({ status: 'Từ chối' }, { transaction: t });
+
+    // GHI LỊCH SỬ
+    await logHistory(
+      hoso_id,
+      oldStatus,
+      'Đã hủy',
+      'Hủy hồ sơ',
+      actor_id,
+      note || 'Người dùng yêu cầu hủy hồ sơ.',
+      t
+    );
+
+    await t.commit();
+    res.status(200).json({ message: 'Hủy hồ sơ thành công.' });
+
+  } catch (error) {
+    await t.rollback();
+    console.error('Lỗi hủy hồ sơ:', error);
+    res.status(500).json({ message: 'Đã có lỗi xảy ra.' });
+  }
 };
 // Hàm lấy tất cả hồ sơ
 exports.getAllHoSo = async (req, res) => {

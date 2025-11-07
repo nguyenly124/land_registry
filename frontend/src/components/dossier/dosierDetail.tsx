@@ -4,22 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { dossierApi, fileApi } from "../../api";
 import type { HoSo } from "../../api/types";
 import { formatDate } from "../../../utils/date";
-
-const statusColorMap: Record<HoSo["status"], string> = {
-  "Chờ xử lý": "yellow",
-  "Đang xử lý": "blue",
-  "Đã duyệt": "green",
-  "Từ chối": "red",
-};
-
-function StatusBadge({ status }: { status: HoSo["status"] }) {
-  const color = statusColorMap[status] || "gray";
-  return (
-    <span className={`px-4 py-2 rounded-full text-sm font-semibold bg-${color}-100 text-${color}-700`}>
-      {status}
-    </span>
-  );
-}
+import StatusBadge from "../../components/dossier/detail/StatusBadge"; // ĐÃ CÓ LỊCH SỬ
 
 export default function DossierDetail() {
   const { id } = useParams<{ id: string }>();
@@ -58,11 +43,10 @@ export default function DossierDetail() {
 
     try {
       const formData = new FormData();
-      newFiles.forEach(file => formData.append('files', file));
-      formData.append('hoso_id', dossier.hoso_id.toString());
+      newFiles.forEach((file) => formData.append("files", file));
+      formData.append("hoso_id", dossier.hoso_id.toString());
 
-      await fileApi.upload(formData); 
-
+      await fileApi.upload(formData);
       alert("Thêm tài liệu thành công!");
       window.location.reload();
     } catch (err: any) {
@@ -133,19 +117,17 @@ export default function DossierDetail() {
         </button>
       </div>
 
+      {/* TRẠNG THÁI + LỊCH SỬ – GỌI COMPONENT MỚI */}
+      <div className="mb-8">
+        <StatusBadge dossier={dossier} />
+      </div>
+
       {/* Thông tin chính */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="space-y-5">
           <div>
             <p className="text-sm font-medium text-gray-500">Loại hồ sơ</p>
             <p className="text-lg font-semibold text-gray-900">{dossier.type}</p>
-          </div>
-
-          <div>
-            <p className="text-sm font-medium text-gray-500">Trạng thái</p>
-            <div className="mt-1">
-              <StatusBadge status={dossier.status} />
-            </div>
           </div>
 
           <div>
@@ -170,7 +152,7 @@ export default function DossierDetail() {
       </div>
 
       {/* Người nộp */}
-      <div className="border-t pt-6">
+      <div className="border-t pt-6 mb-8">
         <h3 className="text-lg font-bold text-blue-900 mb-4">THÔNG TIN NGƯỜI NỘP</h3>
         <div className="bg-gray-50 p-5 rounded-lg">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -201,7 +183,7 @@ export default function DossierDetail() {
       </div>
 
       {/* Tài liệu đính kèm */}
-      <div className="border-t mt-6 pt-6">
+      <div className="border-t pt-6 mb-8">
         <h3 className="text-lg font-bold text-blue-900 mb-4">TÀI LIỆU ĐÍNH KÈM</h3>
         <div className="space-y-3">
           {dossier.HoSoDocuments?.map((doc) => (
@@ -229,14 +211,14 @@ export default function DossierDetail() {
             </div>
           ))}
 
-          {/* Chỉ upload thêm file khi chỉnh sửa */}
+          {/* Upload thêm */}
           {isEditing && (
             <div className="mt-4 p-4 border-2 border-dashed border-blue-300 rounded-lg bg-blue-50">
               <p className="text-sm font-medium text-blue-900 mb-2">
                 Thêm tài liệu bổ sung (bắt buộc ít nhất 1 file)
               </p>
               <input
-                aria-label="upload"
+                aria-label="add"
                 type="file"
                 multiple
                 required

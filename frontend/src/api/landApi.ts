@@ -41,4 +41,7 @@ export const landApi = {
     owner_id?: string;
   }) =>
     axiosClient.get<LandListResponse>("/lands/search", { params }),
+  
+  searchid: (params: { query: string }) =>
+    axiosClient.get<LandParcel>('/lands/searchid', { params }).then(r => r.data),  
 };
