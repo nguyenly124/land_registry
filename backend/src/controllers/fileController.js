@@ -2,49 +2,56 @@ const { initModels } = require('../models/init-models');
 const { sequelize } = require('../config/db');
 const path = require('path');
 const fs = require('fs');
-
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/dossiers/' });
 const { HoSoDocument, HoSo } = initModels(sequelize);
 
 // --- Hàm thêm tài liệu vào hồ sơ ---
 exports.uploadDocument = async (req, res) => {
     try {
-        const { hoso_id } = req.body;
-        const { id: userId, role } = req.user;
-        const file = req.file;
+      const { hoso_id } = req.body;
+      const files = req.files; 
+      const { id: userId, role } = req.user;
 
-        if (!file) {
-            return res.status(400).json({ message: 'Vui lòng chọn một file để tải lên.' });
-        }
+      if (!hoso_id) {
+        return res.status(400).json({ message: 'Thiếu hoso_id.' });
+      }
 
-        const hoso = await HoSo.findByPk(hoso_id);
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: 'Vui lòng chọn ít nhất 1 file.' });
+      }
 
-        if (!hoso) {
-            return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
-        }
-        
-        // Phân quyền: Cán bộ có thể thêm tài liệu vào bất kỳ hồ sơ nào
-        // Người dân chỉ được thêm tài liệu vào hồ sơ của chính họ
-        if (role === 'Người dân' && hoso.account_id !== userId) {
-            return res.status(403).json({ message: 'Bạn không có quyền thêm tài liệu vào hồ sơ này.' });
-        }
+      const hoso = await HoSo.findByPk(hoso_id);
+      if (!hoso) {
+        return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
+      }
 
-        // Tạo bản ghi mới trong database
-        const newDocument = await HoSoDocument.create({
-            hoso_id: hoso_id,
+      if (role === 'Người dân' && hoso.account_id !== userId) {
+        return res.status(403).json({ message: 'Bạn không có quyền thêm tài liệu vào hồ sơ này.' });
+      }
+
+      // TẠO NHIỀU BẢN GHI
+      const documents = await Promise.all(
+        files.map(file =>
+          HoSoDocument.create({
+            hoso_id,
             doc_name: file.originalname,
-            file_path: file.path // Lưu đường dẫn tạm thời của file
-        });
+            file_path: file.path,
+            cloudinary_id: file.filename
+          })
+        )
+      );
 
-        res.status(201).json({
-            message: 'Tải tài liệu lên thành công.',
-            data: newDocument
-        });
+      res.status(201).json({
+        message: 'Tải tài liệu lên thành công.',
+        data: documents
+      });
 
     } catch (error) {
-        console.error('Lỗi khi tải tài liệu lên:', error);
-        res.status(500).json({ message: 'Đã có lỗi xảy ra. Vui lòng thử lại.' });
+      console.error('Lỗi khi tải tài liệu lên:', error);
+      res.status(500).json({ message: 'Đã có lỗi xảy ra. Vui lòng thử lại.' });
     }
-};
+  };
 
 // --- Hàm lấy danh sách tài liệu của một hồ sơ ---
 exports.getDocumentsByHoSoId = async (req, res) => {
@@ -70,7 +77,7 @@ exports.getDocumentsByHoSoId = async (req, res) => {
         res.status(200).json({
             message: 'Lấy danh sách tài liệu thành công.',
             count: documents.length,
-            data: documents
+            hoso: documents
         });
 
     } catch (error) {
@@ -109,40 +116,32 @@ exports.getDocumentById = async (req, res) => {
 };
 // --- Hàm xóa một tài liệu ---
 exports.deleteDocument = async (req, res) => {
-    try {
-        const { doc_id } = req.params;
-        const { id: userId, role } = req.user;
+  try {
+    const { doc_id } = req.params;
+    const { id: userId, role } = req.user;
 
-        const document = await HoSoDocument.findByPk(doc_id, {
-            include: [{
-                model: HoSo,
-                as: 'hoso'
-            }]
-        });
+    const document = await HoSoDocument.findByPk(doc_id, {
+      include: [{ model: HoSo, as: 'hoso' }]
+    });
 
-        if (!document) {
-            return res.status(404).json({ message: 'Không tìm thấy tài liệu.' });
-        }
-        
-        const hoso = document.hoso;
+    if (!document) return res.status(404).json({ message: 'Không tìm thấy tài liệu.' });
 
-        // Phân quyền: Chỉ cán bộ hoặc người tạo hồ sơ mới có quyền xóa
-        if (role === 'Người dân' && hoso.account_id !== userId) {
-             return res.status(403).json({ message: 'Bạn không có quyền xóa tài liệu này.' });
-        }
-
-        // Xóa file vật lý khỏi server
-        fs.unlink(document.file_path, (err) => {
-            if (err) console.error('Lỗi khi xóa file vật lý:', err);
-        });
-
-        // Xóa bản ghi trong database
-        await document.destroy();
-
-        res.status(200).json({ message: 'Xóa tài liệu thành công.' });
-
-    } catch (error) {
-        console.error('Lỗi khi xóa tài liệu:', error);
-        res.status(500).json({ message: 'Đã có lỗi xảy ra. Vui lòng thử lại.' });
+    const hoso = document.hoso;
+    if (role === 'Người dân' && hoso.account_id !== userId) {
+      return res.status(403).json({ message: 'Không có quyền.' });
     }
+
+    // XÓA TRÊN CLOUDINARY
+    if (document.cloudinary_id) {
+      await cloudinary.uploader.destroy(document.cloudinary_id);
+    }
+
+    await document.destroy();
+
+    res.status(200).json({ message: 'Xóa tài liệu thành công.' });
+
+  } catch (error) {
+    console.error('Lỗi xóa tài liệu:', error);
+    res.status(500).json({ message: 'Lỗi server.' });
+  }
 };

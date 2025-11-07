@@ -2,8 +2,19 @@ const { initModels } = require('../models/init-models');
 const { sequelize } = require('../config/db');
 const { emit } = require('../utils/NotificationEvent');
 // Khởi tạo models
-const { HoSo, HoSoDocument,LandParcel, UserProfile, Account } = initModels(sequelize);
+const { HoSo, HoSoDocument,LandParcel, UserProfile, Account, HoSoHistory } = initModels(sequelize);
 
+const logHistory = async (hoso_id, old_status, new_status, action, actor_id, note = null, t = null) => {
+  await HoSoHistory.create({
+    hoso_id,
+    old_status,
+    new_status,
+    action,
+    actor_id,
+    note,
+    created_at: new Date()
+  }, { transaction: t });
+};
 // Chức năng Nộp hồ sơ mới
 exports.submitHoSo = async (req, res) => {
     const io = req.app.get('io');
@@ -41,7 +52,7 @@ exports.submitHoSo = async (req, res) => {
         });
         res.status(201).json({
             message: 'Nộp hồ sơ thành công.',
-            hoso: newHoSo
+            data: newHoSo
         });
 
     } catch (error) {
@@ -107,7 +118,7 @@ exports.requestSupplement = async (req, res) => {
     if (!hoso) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
 
     await hoso.update({
-      status: 'Yêu cầu bổ sung',
+      status: 'Đang xử lý',
       supplement_note: note.trim(),
       updated_at: new Date()
     });
@@ -138,7 +149,7 @@ exports.approveHoSo = async (req, res) => {
 
     const hoso = await HoSo.findByPk(hosoId);
     if (!hoso) return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
-    if (!['Đang xử lý', 'Yêu cầu bổ sung'].includes(hoso.status)) {
+    if (!['Chờ xử lý','Đang xử lý'].includes(hoso.status)) {
       return res.status(400).json({ message: 'Hồ sơ không thể duyệt.' });
     }
 
@@ -213,9 +224,7 @@ exports.editHoSo = async (req, res) => {
         if (!hoso) {
             return res.status(404).json({ message: 'Không tìm thấy hồ sơ.' });
         }
-
-        // Chỉ cho phép chỉnh sửa nếu hồ sơ đang ở trạng thái 'Chờ xử lý'
-        if (hoso.status !== 'Chờ xử lý') {
+        if (hoso.status !== 'Chờ xử lý' && hoso.status !== 'Đang xử lý') {
             return res.status(403).json({ message: 'Không thể chỉnh sửa hồ sơ ở trạng thái này.' });
         }
 

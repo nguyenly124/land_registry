@@ -1,4 +1,5 @@
 
+
 export interface AuthUser {
   account_id: string;
   username: string;
@@ -139,37 +140,66 @@ export interface CreateStaffRequest {
 
 // === LAND ===
 export interface LandParcel {
-  id: string;
+  parcel_id: string; 
   parcel_code: string;
   address: string;
   area: number;
-  description?: string;
-  owner_id: string;
+  // Thông tin bổ sung
+  land_type?: string | null; 
+  registration_status?: 'Chưa cấp' | 'Đang xử lý' | 'Đã cấp' | null;
+  certificate_number?: string | null;
+  certificate_issue_date?: string | null; 
+  // Tọa độ (nếu có)
+  latitude?: number | null;
+  longitude?: number | null;
+  // Chủ sở hữu
+  owner_id?: string | null;
   owner?: {
     account_id: string;
     username: string;
-    role: string;
-    UserProfiles?: UserProfile[];
-  };
+    role: 'Người dân' | 'Cán bộ';
+    UserProfile?: {
+      full_name: string;
+      phone: string;
+      email: string;
+    } | null;
+  } | null;
 }
 
-export interface CreateLandRequest {
-  parcel_code: string;
-  address: string;
-  area: number;
-  owner_id: string;
-  description?: string;
-}
 
 export interface LandListResponse {
   message: string;
-  items: LandParcel[];
+  data: LandParcel[];
   count: number;
   totalItems: number;
   totalPages: number;
   currentPage: number;
 }
+export interface CreateLandRequest {
+  parcel_code: string;
+  address: string;
+  area: number;
+  owner_id?: string | null;
+  land_type?: string;
+  certificate_number?: string;
+  certificate_issue_date?: string;
+  registration_status?: string;
+  latitude?: number;
+  longitude?: number;
+}
 
+export interface UpdateLandRequest {
+  parcel_code?: string;
+  address?: string;
+  area?: number;
+  owner_id?: number | null;
+  land_type?: string;
+  certificate_number?: string;
+  certificate_issue_date?: string;
+  registration_status?: string;
+  latitude?: number;
+  longitude?: number;
+}
 // === DOSSIER (Hồ sơ) ===
 export interface HoSoDocument {
   doc_id: string;
@@ -196,11 +226,7 @@ export interface HoSo {
       email:string;
     };
   };
-  parcel?: {
-    parcel_code: string;
-    address: string;
-    area?: number;
-  };
+  parcel?: LandParcel;
   HoSoDocuments?: {
     doc_id:string,
     doc_name:string,
@@ -208,7 +234,6 @@ export interface HoSo {
     uploaded_at:string;
   }[];
 }
-
 export interface SubmitHoSoRequest {
   type: string;
   parcelId?: string;
@@ -223,7 +248,7 @@ export interface CancelHoSoRequest {
 export interface UpdateHoSoRequest {
   hosoId: string;
   type?: string;
-  parcelId?: string;
+  parcelId?: number;
 }
 
 export interface ApproveHoSoRequest {

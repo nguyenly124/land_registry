@@ -28,10 +28,10 @@ export const dossierApi = {
   cancel: (data: CancelHoSoRequest) =>
     axiosClient.put<HoSoResponse>('/dossier/cancel', data).then(r=> r.data),
 
-  approve: (hosoId: string) => axiosClient.patch(`/dossiers/${hosoId}/approve`),
-  reject: (hosoId: string, reason: string) => axiosClient.patch(`/dossiers/${hosoId}/reject`, { reason }),
-  requestSupplement: (hosoId: string, note: string) => axiosClient.patch(`/dossiers/${hosoId}/supplement`, { note }),
-  confirmProcessing: (hosoId: string) => axiosClient.patch(`/dossiers/${hosoId}/confirm`),
+  approve: (hosoId: string) => axiosClient.patch(`/dossier/${hosoId}/approve`),
+  reject: (hosoId: string, reason: string) => axiosClient.patch(`/dossier/${hosoId}/reject`, { reason }),
+  requestSupplement: (hosoId: string, note: string) => axiosClient.patch(`/dossier/${hosoId}/supplement`, { note }),
+  confirmProcessing: (hosoId: string) => axiosClient.patch(`/dossier/${hosoId}/confirm`),
   // Tìm kiếm hồ sơ - GET /dossiers/search
   search: (params: {
     query?: string;

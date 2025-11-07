@@ -18,8 +18,15 @@ export const userApi = {
   getProfile: () =>
     axiosclient.get<GetProfileResponse>('/user/getProfile').then(r => r.data),
 
-  getUsersByRole: (role: 'Người dân' | 'Cán bộ') =>
-    axiosclient.get<GetUsersByRoleResponse>(`/user/getUsersByRole/${role}`).then(r => r.data),
+  getUsersByRole: (role?: 'Người dân' | 'Cán bộ' | 'Tất cả') =>{
+    if (!role || role === 'Tất cả') {
+      // Không truyền role hoặc role = "Tất cả" → gọi /users
+      return axiosclient.get<GetUsersByRoleResponse>('/user').then(r => r.data);
+    } else {
+      // Truyền role hợp lệ → gọi /users/role/...
+      return axiosclient.get<GetUsersByRoleResponse>(`/user/${role}`).then(r => r.data);
+    }
+  },
 
   updateProfile: (data:UpdateProfileRequest ) =>
     axiosclient.put<UpdateProfileResponse>('/user/profile', data).then(r => r.data),

@@ -1,6 +1,10 @@
 // src/services/emailService.js
+const { initModels } = require('../models/init-models');
+const { sequelize } = require('../config/db');
 const nodemailer = require('nodemailer'); 
 
+const models = initModels(sequelize);
+const { Notification, UserProfile, Account } = models;
 // Tạo transporter
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -66,7 +70,8 @@ const createAndNotify = async (io, accountId, message, sendEmailTo = null) => {
     const notification = await Notification.create({
       account_id: accountId,
       message: message.trim(),
-      is_read: false
+      is_read: false,
+      created_at: new Date(),
     });
 
     // 2. Gửi real-time nếu user online
@@ -94,8 +99,6 @@ const createAndNotify = async (io, accountId, message, sendEmailTo = null) => {
       `;
       await sendEmail(sendEmailTo.email, subject, html).catch(console.error);
     }
-
-    console.log(`[Thông báo] Đã gửi đến user_${accountId}`);
     return notification;
   } catch (error) {
     console.error('[Thông báo] Lỗi:', error);

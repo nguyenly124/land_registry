@@ -37,29 +37,42 @@ exports.getProfile = async (req, res) => {
 };
 
 // Hàm lấy danh sách người dùng theo vai trò 
+// src/controllers/userController.js
 exports.getUsersByRole = async (req, res) => {
   try {
-    const { role } = req.params; 
+    const { role } = req.params;
 
-    // Kiểm tra role có hợp lệ không
-    if (role !== 'Người dân' && role !== 'Cán bộ') {
-      return res.status(400).json({ message: 'Vai trò không hợp lệ.' });
+    // XÂY DỰNG ĐIỀU KIỆN WHERE
+    const whereClause = {};
+
+    if (role && role !== 'Tất cả') {
+      // Chỉ lọc nếu role hợp lệ và không phải "Tất cả"
+      if (role !== 'Người dân' && role !== 'Cán bộ') {
+        return res.status(400).json({ message: 'Vai trò không hợp lệ. Chỉ chấp nhận: Người dân, Cán bộ hoặc Tất cả.' });
+      }
+      whereClause.role = role;
     }
+    // Nếu không có role hoặc role = "Tất cả" → whereClause = {} → lấy tất cả
 
     const users = await Account.findAll({
-      where: { role: role },
+      where: whereClause,
       attributes: { 
         exclude: ['password', 'hashed_password', 'verification_code', 'reset_password_token'] 
       },
       include: [{
         model: UserProfile,
         as: 'UserProfile',
-        attributes: ['full_name', 'dob', 'address', 'phone', 'email', 'cccd', 'position', 'agency', 'staff_code','avatar_url']
-      }]
+        attributes: ['full_name', 'dob', 'address', 'phone', 'email', 'cccd', 'position', 'agency', 'staff_code', 'avatar_url']
+      }],
+      order: [['created_at', 'DESC']] // Sắp xếp mới nhất trước
     });
 
+    const message = role && role !== 'Tất cả' 
+      ? `Lấy danh sách người dùng có vai trò '${role}' thành công.` 
+      : 'Lấy danh sách tất cả người dùng thành công.';
+
     res.status(200).json({
-      message: `Lấy danh sách người dùng có vai trò '${role}' thành công.`,
+      message,
       count: users.length,
       data: users
     });

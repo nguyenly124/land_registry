@@ -47,10 +47,10 @@ export default function NotificationDropdown() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const socket = io(API_URL, {
-      auth: { token },
-      transports: ["websocket"],
-    });
+    const socket = io(API_URL, { autoConnect: false, transports: ["websocket"] });
+
+    socket.auth = { token: localStorage.getItem("token") };
+    socket.connect();
 
     socket.on("connect", () => {
       const payload = JSON.parse(atob(token.split(".")[1]));

@@ -8,3 +8,11 @@ export const formatDate = (dateString: string) => {
     minute: "2-digit",
   });
 };
+export function formatDateVN(date: string | Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(date)); 
+}

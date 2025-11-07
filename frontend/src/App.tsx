@@ -12,6 +12,12 @@ import AdminHome from "./components/page/staff/adminHome";
 import { AuthProvider, useAuth } from "./context/authContext";
 import DossierManagement from "../src/components/page/staff/dossierStaff"
 import DossierDetailStaff from "./components/page/staff/DossierDetailStaff";
+import LandManagement from "./components/page/staff/LandManagement";
+import LandDetailStaff from "./components/page/staff/LandDetailStaff";
+import "leaflet/dist/leaflet.css";
+import CreateLandStaff from "./components/page/staff/CreateLandStaff";
+import UserManagement from "./components/page/staff/UserManagement";
+import NotificationsPage from "./components/page/NotificationsPage";
 function AppContent() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -25,11 +31,12 @@ function AppContent() {
     goHome();
   };
   useEffect(() => {
-    if (user) {
-      if (isAdmin) navigate("/staff/dashboard");
-      else navigate("/");
-    }
-  }, [user]);
+  if (!user) return; 
+
+  if (location.pathname === "/") {
+    if (isAdmin) navigate("/staff/dashboard");
+  }
+}, [user]);
 
   return (
     <div className="min-h-screen flex flex-col overflow-x-hidden">
@@ -61,8 +68,7 @@ function AppContent() {
            
           {/* Trang chi tiết hồ sơ */}
           <Route path="/dossier/:id" element={<DossierDetail />} />
-          <Route path="/dossierstaff" element={<DossierManagement />} />
-          <Route path="/dossierstaff/:id" element={<DossierDetailStaff />}/>
+          
           {/* Trang dành cho Cán bộ */}
           <Route
             path="/staff/dashboard"
@@ -72,6 +78,13 @@ function AppContent() {
                 : <Home onShowInstructions={goInstructions} />
             }
           />
+          <Route path="/dossierstaff" element={<DossierManagement />} />
+          <Route path="/dossierstaff/:id" element={<DossierDetailStaff />}/>
+          <Route path="/landstaff" element={<LandManagement />}/>
+          <Route path="/landstaff/:id" element={<LandDetailStaff />}/>
+          <Route path="/landstaff/create" element={<CreateLandStaff />}/>
+          <Route path="/users" element={<UserManagement />}/>
+          <Route path="/notifications" element={<NotificationsPage />}/>
         </Routes>
       </main>
 

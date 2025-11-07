@@ -27,7 +27,9 @@ router.put('/profile', authMiddleware, validate(updateProfileSchema), userContro
 
 router.get('/getProfile',authMiddleware,userController.getProfile);
 
-router.get('/getUsersByRole/:role',authMiddleware,userController.getUsersByRole);
+router.get('/',authMiddleware,userController.getUsersByRole);
+
+router.get('/:role',authMiddleware,userController.getUsersByRole);
 
 router.put('/changePassword',authMiddleware,validate(changePasswordSchema),userController.changePassword);
 

@@ -1,7 +1,8 @@
 // utils/NotificationEvent.js
 const EventEmitter = require('events');
 const { createAndNotify } = require('../services/emailService');
-const { Account, UserProfile } = require('../models/init-models')(require('../config/db').sequelize);
+const { UserProfile, Account } =
+  require('../models/init-models')(require('../config/db').sequelize);
 
 class NotificationEvent extends EventEmitter {}
 
@@ -53,7 +54,15 @@ notificationEvent.on('hoso.rejected', async ({ io, accountId, hosoId, reason }) 
   );
 });
 
-
+notificationEvent.on('hoso.supplement_requested', async ({ io, accountId, hosoId, reason }) => {
+  const profile = await UserProfile.findOne({ where: { account_id: accountId } });
+  await createAndNotify(
+    io,
+    accountId,
+    `Hồ sơ #${hosoId} yêu cầu bổ sung . Lý do: ${reason || 'Không rõ'}.`,
+    profile ? { email: profile.email, name: profile.full_name } : null
+  );
+});
 module.exports = {
   emit: (event, data) => notificationEvent.emit(event, data)
 };

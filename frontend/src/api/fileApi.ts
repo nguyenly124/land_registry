@@ -12,19 +12,15 @@ const uploadClient = axios.create({
 });
 
 export const fileApi = {
-  upload: (hoso_id: string, file: File) => {
-    const form = new FormData();
-    form.append('hoso_id', hoso_id);
-    form.append('file', file);
-    return uploadClient.post<ApiResponse<HoSoDocument>>('/files/upload', form).then(r => r.data.data);
+  upload: (formData: FormData) => {
+  return axiosClient.post('/file/submit', formData);
   },
-
   getByHoSoId: (hoso_id: string) =>
-    axiosClient.get<ApiResponse<HoSoDocument[]>>(`/files/hoso/${hoso_id}`).then(r => r.data.data),
+    axiosClient.get<HoSoDocument[]>(`/file/hoso/${hoso_id}`).then(r => r.data),
 
   getById: (doc_id: string) =>
-    axiosClient.get<ApiResponse<HoSoDocument>>(`/files/${doc_id}`).then(r => r.data.data),
+    axiosClient.get<HoSoDocument>(`/file/${doc_id}`).then(r => r.data),
 
   delete: (doc_id: string) =>
-    axiosClient.delete<ApiResponse<any>>(`/files/${doc_id}`).then(r => r.data.data),
+    axiosClient.delete<any>(`/file/${doc_id}`).then(r => r.data.data),
 };

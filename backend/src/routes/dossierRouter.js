@@ -15,12 +15,6 @@ const { searchSchema } = require('../validators/searchSchema');
 // @desc    Nộp hồ sơ mới
 // @access  Private (Chỉ người dân)
 router.post('/submit', authMiddleware, validate(submitFileSchema), dossierController.submitHoSo);
-
-// @route   PUT /api/hoso/approve
-// @desc    Duyệt/từ chối hồ sơ
-// @access  Private (Chỉ cán bộ)
-router.put('/approve', authMiddleware, validate(approveHoSoSchema), dossierController.approveHoSo);
-
 // @route   PUT /api/hoso/edit
 // @desc    Chỉnh sửa hồ sơ
 // @access  Private (Chỉ người dân)
@@ -40,4 +34,8 @@ router.get('/search', validate(searchSchema), dossierController.searchHoSo);
 router.get('/getHoSoDetails',validate())
 router.get('/getdetail/:id',authMiddleware,dossierController.getHoSoDetails)
 router.get('/getall',authMiddleware,dossierController.getAllHoSo)
+router.patch('/:hosoId/confirm', authMiddleware,dossierController.confirmProcessing);
+router.patch('/:hosoId/supplement',authMiddleware, dossierController.requestSupplement);
+router.patch('/:hosoId/approve',authMiddleware, dossierController.approveHoSo);
+router.patch('/:hosoId/reject', authMiddleware,dossierController.rejectHoSo);
 module.exports = router;
