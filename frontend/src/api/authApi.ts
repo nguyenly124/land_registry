@@ -20,6 +20,15 @@ export const authApi = {
     const res = await axiosclient.post('/auth/send-otp', { email });
     return res.data;
   },
+  forgotPassword: async (email: string): Promise<{ success: boolean; message: string }> => {
+    const res = await axiosclient.post("/auth/forgot-password", { email: email });
+    return res.data;
+  },
+
+   resetPassword: async (email: string, otp: string, newPassword: string): Promise<{ message: string }> => {
+    const res = await axiosclient.post('/auth/reset-password', { email, otp, newPassword });
+    return res.data;
+  },
 
   // Xác thực OTP
   verifyOTP: async (email: string, otp: string): Promise<{ message: string }> => {
@@ -28,10 +37,17 @@ export const authApi = {
   },
 
   // Đăng ký cuối cùng
-  register: async (data: RegisterRequest): Promise<RegisterResponse> => {
-    const res = await axiosclient.post<RegisterResponse>('/auth/register', data);
+  register: async (data: RegisterRequest) => {
+  console.log("[API] Gửi đăng ký:", data);
+  try {
+    const res = await axiosclient.post('/auth/register', data);
+    console.log("[API] Thành công:", res.data);
     return res.data;
-  },
+  } catch (err: any) {
+    console.error("[API] Lỗi:", err.response?.data || err.message);
+    throw err;
+  }
+},
 
   refreshToken: async (data: RefreshTokenRequest): Promise<RefreshTokenResponse> => {
     const res = await axiosclient.post<RefreshTokenResponse>('/auth/refresh', data);

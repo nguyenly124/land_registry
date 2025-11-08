@@ -128,11 +128,36 @@ const createAndNotify = async (io, accountId, message, hoso_id = null, sendEmail
     throw error;
   }
 };
+const sendOTPEmail = async ({ to, fullName, otp }) => {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+      <h2 style="color: #1e40af;">Xác nhận đặt lại mật khẩu</h2>
+      <p>Xin chào <strong>${fullName}</strong>,</p>
+      <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn.</p>
+      <div style="text-align: center; margin: 30px 0;">
+        <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1e40af;">
+          ${otp}
+        </span>
+      </div>
+      <p>Mã OTP có hiệu lực trong <strong>5 phút</strong>.</p>
+      <p>Nếu bạn không yêu cầu, vui lòng bỏ qua email này.</p>
+      <hr>
+      <p style="font-size: 12px; color: #666;">Hệ thống quản lý hồ sơ đất đai</p>
+    </div>
+  `;
 
+  await transporter.sendMail({
+    from: `"Hệ thống quản lý" <${process.env.SMTP_USER}>`,
+    to,
+    subject: "Mã OTP đặt lại mật khẩu",
+    html,
+  });
+};
 module.exports = {
   sendOTP,
   sendEmail,
   createAndNotify,
-  transporter
+  transporter,
+  sendOTPEmail
 };
 

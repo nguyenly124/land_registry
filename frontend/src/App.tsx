@@ -18,6 +18,7 @@ import "leaflet/dist/leaflet.css";
 import CreateLandStaff from "./components/page/staff/CreateLandStaff";
 import UserManagement from "./components/page/staff/UserManagement";
 import NotificationsPage from "./components/page/NotificationsPage";
+import ResetPasswordForm from "./components/ResetPasswordForm";
 function AppContent() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -85,6 +86,7 @@ function AppContent() {
           <Route path="/landstaff/create" element={<CreateLandStaff />}/>
           <Route path="/users" element={<UserManagement />}/>
           <Route path="/notifications" element={<NotificationsPage />}/>
+          <Route path="/reset-password" element={<ResetPasswordForm />}/>
         </Routes>
       </main>
 

@@ -23,6 +23,7 @@ export default function RegisterModal({ open, onClose }: Props) {
   const handleSuccess = () => {
     setTimeout(() => {
       onClose();
+      alert("Đăng ký thành công, vui lòng chọn đăng nhập vào hệ thống");
       window.location.href = "/";
     }, 1500);
   };

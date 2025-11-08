@@ -43,6 +43,31 @@ exports.changePasswordSchema = Joi.object({
     'any.required': 'Mật khẩu mới là bắt buộc.'
   }),
 });
+exports.resetPassword = Joi.object({
+   email: Joi.string()
+    .email({ tlds: { allow: false } })
+    .required()
+    .messages({
+      "string.empty": "Email không được rỗng.",
+      "string.email": "Email không hợp lệ.",
+      "any.required": "Email là bắt buộc.",
+    }),
+  otp: Joi.string()
+    .length(6)
+    .pattern(/^\d+$/)
+    .required()
+    .messages({
+      "string.empty": "Mã OTP không được rỗng.",
+      "string.length": "Mã OTP phải gồm 6 chữ số.",
+      "string.pattern.base": "Mã OTP chỉ chứa số.",
+      "any.required": "Mã OTP là bắt buộc.",
+    }),
+  newPassword: Joi.string().pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^a-zA-Z0-9\\s]).{8,30}$')).required().messages({
+    'string.empty': 'Mật khẩu mới không được rỗng.',
+    'string.pattern.base': 'Mật khẩu mới phải từ 8 đến 30 ký tự, chỉ chứa chữ cái và số.',
+    'any.required': 'Mật khẩu mới là bắt buộc.'
+  }),
+});
 // Schema cho chức năng Tạo tài khoản Cán bộ
 exports.createStaffAccountSchema = Joi.object({
   username: Joi.string().trim().alphanum().min(3).max(30).required().messages(customMessages).label('Tên đăng nhập'),

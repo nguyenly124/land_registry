@@ -38,6 +38,23 @@ module.exports = function(sequelize, DataTypes) {
       type: DataTypes.INTEGER,
       allowNull: true,
       defaultValue: 30
+    },
+    failed_attempts: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0
+    },
+    lock_until: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    reset_token: {
+      type: DataTypes.STRING(6),
+      allowNull: true
+    },
+    reset_expires: {
+      type: DataTypes.DATE,
+      allowNull: true
     }
   }, {
     sequelize,
