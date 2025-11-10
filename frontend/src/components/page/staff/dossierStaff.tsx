@@ -1,9 +1,10 @@
 // src/pages/DossierManagement.tsx
-import React, { useEffect, useState, useMemo } from "react";
+import  { useEffect, useState, useMemo } from "react";
 import { dossierApi } from "../../../api/dossierApi";
 import type { HoSo } from "../../../api/types";
 import { formatDate } from "../../../../utils/date";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../../context/authContext";
 import {
   Search, Filter, FileText, User, MapPin, Calendar, Eye, Loader2, AlertCircle
 } from "lucide-react";
@@ -26,6 +27,7 @@ function StatusBadge({ status }: { status: HoSo["status"] }) {
 }
 
 export default function DossierManagement() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [dossiers, setDossiers] = useState<HoSo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +47,7 @@ export default function DossierManagement() {
     let isMounted = true;
 
     const fetchDossiers = async () => {
+      if (user?.role !== "Cán bộ") return;
       if (!isMounted) return;
 
       try {
@@ -97,7 +100,7 @@ export default function DossierManagement() {
 
   const paginatedDossiers = filteredDossiers.slice((page - 1) * limit, page * limit);
 
-  const handleViewDetail = (hosoId: string) => {
+  const handleViewDetail = (hosoId: number) => {
     navigate(`/dossierstaff/${hosoId}`);
   };
 

@@ -1,10 +1,10 @@
 // src/components/page/staff/LandManagement.tsx
-import React, { useState, useEffect } from "react";
+import  { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { landApi } from "../../../api/landApi";
 import type { LandParcel } from "../../../api/types";
 import { useAuth } from "../../../context/authContext";
-import { format } from "date-fns";
+
 
 export default function LandManagement() {
   const [lands, setLands] = useState<LandParcel[]>([]);
@@ -13,7 +13,7 @@ export default function LandManagement() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isStaff = user?.role === "Cán bộ";
-  const isUser = user?.role === "Người dân";
+
 
   useEffect(() => {
     loadLands();
@@ -38,7 +38,7 @@ export default function LandManagement() {
       )
     : lands;
 
-  const handleViewDetail = (id: string) => {
+  const handleViewDetail = (id: number) => {
     navigate(`/landstaff/${id}`);
   };
 

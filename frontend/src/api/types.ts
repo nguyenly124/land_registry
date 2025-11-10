@@ -1,7 +1,7 @@
 
 
 export interface AuthUser {
-  account_id: string;
+  account_id: number;
   username: string;
   role: 'Người dân' | 'Cán bộ';
   token: string;      
@@ -10,7 +10,7 @@ export interface LoginResponse {
   message: string;
   token: string;
   user: {
-    account_id: string;
+    account_id: number;
     username: string;
     role: 'Người dân' | 'Cán bộ';
     last_login?: string;
@@ -20,7 +20,7 @@ export interface LoginResponse {
 export interface RegisterResponse {
   message: string;
   user: {
-    account_id: string;
+    account_id: number;
     username: string;
     role: 'Người dân' | 'Cán bộ';
   };
@@ -68,7 +68,7 @@ export interface UserProfile {
 }
 
 export interface Account {
-  account_id: string;
+  account_id: number;
   username: string;
   role: 'Người dân' | 'Cán bộ';
   last_login?: string;
@@ -106,7 +106,7 @@ export interface ChangePasswordResponse {
 export interface CreateStaffResponse {
   message: string;
   account: {
-    account_id: string;
+    account_id: number;
     username: string;
     role: 'Cán bộ';
   };
@@ -153,9 +153,9 @@ export interface LandParcel {
   latitude?: number | null;
   longitude?: number | null;
   // Chủ sở hữu
-  owner_id?: string | null;
+  owner_id?: number | null;
   owner?: {
-    account_id: string;
+    account_id: number;
     username: string;
     role: 'Người dân' | 'Cán bộ';
     UserProfile?: {
@@ -179,7 +179,7 @@ export interface CreateLandRequest {
   parcel_code: string;
   address: string;
   area: number;
-  owner_id?: string | null;
+  owner_id?: number | null;
   land_type?: string;
   certificate_number?: string;
   certificate_issue_date?: string;
@@ -202,17 +202,17 @@ export interface UpdateLandRequest {
 }
 // === DOSSIER (Hồ sơ) ===
 export interface HoSoDocument {
-  doc_id: string;
-  hoso_id: string;
+  doc_id: number;
+  hoso_id: number;
   doc_name: string;
   file_path: string;
   uploaded_at: string;
 }
 
 export interface HoSo {
-  hoso_id: string;
-  account_id: string;
-  parcel_id?: string;
+  hoso_id: number;
+  account_id: number;
+  parcel_id?: number;
   type: string;
   status: 'Chờ xử lý' | 'Đang xử lý' | 'Đã duyệt' | 'Từ chối';
   created_at: string;
@@ -228,7 +228,7 @@ export interface HoSo {
   };
   parcel?: LandParcel;
   HoSoDocuments?: {
-    doc_id:string,
+    doc_id:number,
     doc_name:string,
     file_path:string,
     uploaded_at:string;
@@ -260,7 +260,7 @@ export interface GetHistoryResponse {
 }
 export interface SubmitHoSoRequest {
   type: string;
-  parcelId?: string;
+  parcelId?: number;
   receiver_info?: {
     full_name: string;
     id_number: string;
@@ -273,16 +273,17 @@ export interface HoSoResponse {
   data: HoSo;
 }
 export interface CancelHoSoRequest {
-  hosoId: string;
+  hosoId: number;
+  note?: string;
 }
 export interface UpdateHoSoRequest {
-  hosoId: string;
+  hosoId: number;
   type?: string;
   parcelId?: number;
 }
 
 export interface ApproveHoSoRequest {
-  hosoId: string;
+  hosoId: number;
   action: 'Đã duyệt' | 'Từ chối' | 'Đang xử lý';
 }
 
@@ -346,12 +347,12 @@ export interface ApiResponse {
 
 // === FILE ===
 export interface UploadDocumentRequest {
-  hoso_id: string;
+  hoso_id: number;
   file: File;
 }
 
 export interface UploadDocumentResponse {
   message: string;
-  doc_id: string;
+  doc_id: number;
   file_path: string;
 }

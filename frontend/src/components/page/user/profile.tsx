@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { userApi } from "../../../api/userApi";
 import { useAuth } from "../../../context/authContext";
-import { Navigate, useNavigate } from "react-router-dom";
+import {  useNavigate } from "react-router-dom";
 
 import type {
   GetProfileResponse,
@@ -191,7 +191,6 @@ export default function Profile() {
       alert("Cập nhật thành công!");
 
     } catch (err: any) {
-      console.error("Lỗi cập nhật:", err.response?.data);
       alert(err.response?.data?.message || "Lỗi cập nhật hồ sơ.");
     } finally {
       setSaving(false);

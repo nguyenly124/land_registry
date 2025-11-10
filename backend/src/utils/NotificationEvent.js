@@ -1,7 +1,7 @@
 // utils/NotificationEvent.js
 const EventEmitter = require('events');
 const { createAndNotify } = require('../services/emailService');
-const { UserProfile, Account } =
+const { UserProfile, Account ,HoSo, LandParcel } =
   require('../models/init-models')(require('../config/db').sequelize);
 
 class NotificationEvent extends EventEmitter {}
@@ -28,7 +28,12 @@ notificationEvent.on('hoso.submitted', async ({ io, accountId, type, hosoId, par
     // Gửi cho tất cả cán bộ
     const canBoList = await Account.findAll({ where: { role: 'Cán bộ' } });
     for (const cb of canBoList) {
-      await createAndNotify(io, cb.account_id,hosoId, `Hồ sơ mới: ${type} (ID: ${accountId})`);
+      await createAndNotify(
+        io, 
+        cb.account_id,
+        `Hồ sơ mới: ${type} (ID: ${accountId})`,
+        hosoId, 
+    );
     }
   } catch (error) {
     console.error('Lỗi xử lý sự kiện hoso.submitted:', error);
@@ -40,7 +45,7 @@ notificationEvent.on('hoso.approved', async ({ io, accountId, hosoId }) => {
     // 1. LẤY HỒ SƠ + THÔNG TIN
     const hoso = await HoSo.findByPk(hosoId, {
       include: [
-        { model: Account, as: 'account', include: [UserProfile] },
+        { model: Account, as: 'account', include: [{model:UserProfile, as :'UserProfile'}] },
         { model: LandParcel, as: 'parcel' }
       ]
     });

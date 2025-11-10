@@ -41,7 +41,7 @@ export default function NotificationsPage() {
           )
         );
       } catch (error) {
-        console.error("Lỗi đánh dấu đã đọc:", error);
+       
       } finally {
         setMarking((prev) => {
           const next = new Set(prev);
@@ -76,7 +76,7 @@ export default function NotificationsPage() {
         setNotifications((prev) => (append ? [...prev, ...filtered] : filtered));
         setHasMore(res.pagination.page < res.pagination.totalPages);
       } catch (error) {
-        console.error("Lỗi tải thông báo:", error);
+       
       } finally {
         setLoading(false);
       }
@@ -128,7 +128,6 @@ export default function NotificationsPage() {
         prev.map((n) => (n.notification_id === id ? { ...n, is_read: true } : n))
       );
     } catch (error) {
-      console.error("Lỗi đánh dấu đã đọc:", error);
     } finally {
       setMarking((prev) => {
         const next = new Set(prev);
@@ -144,7 +143,6 @@ export default function NotificationsPage() {
       await notificationApi.deleteNotification(id);
       setNotifications((prev) => prev.filter((n) => n.notification_id !== id));
     } catch (error) {
-      console.error("Lỗi xóa thông báo:", error);
     }
   };
 

@@ -2,7 +2,7 @@
 import { formatDate } from "../../../../utils/date";
 
 interface Document {
-  doc_id: string;
+  doc_id: number;
   doc_name: string;
   file_path: string;
   uploaded_at: string;

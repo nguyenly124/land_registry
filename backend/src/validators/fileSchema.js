@@ -37,5 +37,5 @@ exports.editHoSoSchema = Joi.object({
 
 // Schema cho chức năng Yêu cầu hủy hồ sơ
 exports.cancelHoSoSchema = Joi.object({
-  hosoId: Joi.number().integer().required().messages(customMessages).label('Mã hồ sơ'),
+  hoso_id: Joi.number().integer().required().messages(customMessages).label('Mã hồ sơ'),
 }).messages(customMessages);

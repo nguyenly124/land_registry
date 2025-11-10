@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { dossierApi } from "../../../api/dossierApi";
 import type { HoSo } from "../../../api/types";
-import { Loader2, AlertCircle, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import ParcelMap from "../../common/ParcelMap";
 import Header from "../../../components/dossier/detail/Header";
 import StatusBadge from "../../../components/dossier/detail/StatusBadge";
@@ -13,7 +13,7 @@ import UserInfo from "../../../components/dossier/detail/UserInfo";
 import DocumentList from "../../../components/dossier/detail/DocumentList";
 import ActionButtons from "../../../components/dossier/detail/ActionButtons";
 import ActionModal from "../../../components/dossier/detail/ActionModal";
-
+import { useAuth } from "../../../context/authContext";
 interface ActionModalState {
   type: "approve" | "request" | "reject" | null;
   open: boolean;
@@ -21,15 +21,16 @@ interface ActionModalState {
 }
 
 export default function DossierDetailStaff() {
+  const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
   const [dossier, setDossier] = useState<HoSo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionModal, setActionModal] = useState<ActionModalState>({ type: null, open: false, note: "" });
 
   useEffect(() => {
+    if (user?.role !== "Cán bộ") return;
     const fetchDossier = async () => {
       if (!id) return;
       try {
@@ -60,20 +61,30 @@ export default function DossierDetailStaff() {
     }
 
     try {
-      let res;
       switch (actionModal.type) {
         case "approve":
-          res = await dossierApi.approve(dossier.hoso_id);
+          await dossierApi.approve(dossier.hoso_id);
           break;
         case "request":
-          res = await dossierApi.requestSupplement(dossier.hoso_id, actionModal.note);
+          await dossierApi.requestSupplement(dossier.hoso_id, actionModal.note);
           break;
         case "reject":
-          res = await dossierApi.reject(dossier.hoso_id, actionModal.note);
+          await dossierApi.reject(dossier.hoso_id, actionModal.note);
           break;
       }
-      alert(`Hồ sơ đã được ${actionModal.type === "approve" ? "duyệt" : actionModal.type === "request" ? "yêu cầu bổ sung" : "từ chối"} thành công!`);
-      const updated = await dossierApi.getdetail(id!);
+
+      alert(
+        `Hồ sơ đã được ${
+          actionModal.type === "approve"
+            ? "duyệt"
+            : actionModal.type === "request"
+            ? "yêu cầu bổ sung"
+            : "từ chối"
+        } thành công!`
+      );
+
+      // Cập nhật lại chi tiết hồ sơ
+      const updated = await dossierApi.getdetail(dossier.hoso_id.toString());
       setDossier(updated.data);
       closeModal();
     } catch (err: any) {
@@ -110,7 +121,7 @@ export default function DossierDetailStaff() {
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-8">
-      <Header dossierId={dossier.hoso_id} />
+      <Header dossierId={dossier.hoso_id.toString()} />
       <StatusBadge dossier={dossier} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

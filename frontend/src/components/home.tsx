@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Login from "./login";
+
 
 function Home({ onShowInstructions }: { onShowInstructions: () => void }) {
     const [openLogin, setOpenLogin] = useState(false);

@@ -1,6 +1,8 @@
 const { initModels } = require('../models/init-models');
 const { sequelize } = require('../config/db');
 const { emit } = require('../utils/NotificationEvent');
+const bcrypt = require('bcryptjs');
+
 // Khởi tạo models
 const { HoSo, HoSoDocument,LandParcel, UserProfile, Account, HoSoHistory } = initModels(sequelize);
 
@@ -140,6 +142,7 @@ exports.confirmProcessing = async (req, res) => {
 
 // ===  Yêu cầu bổ sung tài liệu ===
 exports.requestSupplement = async (req, res) => {
+ 
   let t;
   const io = req.app.get('io');
   try {
@@ -210,12 +213,19 @@ exports.approveHoSo = async (req, res) => {
     const { hosoId } = req.params;
     const { note } = req.body;
     const actor_id = req.user.id;
+    const { role } = req.user;
 
+    // if (role !== 'Cán bộ') {
+    //   await t.rollback();
+    //   return res.status(403).json({ message: 'Chỉ cán bộ mới được thực hiện .' });
+    // }
     // 1. TÌM HỒ SƠ
     const hoso = await HoSo.findByPk(hosoId, {
       include: [
         { model: LandParcel, as: 'parcel' },
-        { model: Account, as: 'account', include: [UserProfile] }
+        { model: Account, as: 'account', 
+          include: [{model: UserProfile, as: 'UserProfile'}] 
+        }
       ],
       transaction: t
     });
@@ -403,14 +413,13 @@ exports.editHoSo = async (req, res) => {
 };
 // Chức năng Yêu cầu hủy hồ sơ
 exports.cancelHoSo = async (req, res) => {
+  
   const t = await sequelize.transaction();
   try {
     const { hoso_id } = req.params;
-    const { note } = req.body;
     const { id: actor_id, role } = req.user;
-
     const hoso = await HoSo.findByPk(hoso_id, {
-      include: [{ model: Account, attributes: ['role'] }],
+      include: [{ model: Account,as: 'account', attributes: ['role'] }],
       transaction: t
     });
 
@@ -440,12 +449,12 @@ exports.cancelHoSo = async (req, res) => {
       'Đã hủy',
       'Hủy hồ sơ',
       actor_id,
-      note || 'Người dùng yêu cầu hủy hồ sơ.',
+       'Người dùng yêu cầu hủy hồ sơ.',
       t
     );
 
     await t.commit();
-    res.status(200).json({ message: 'Hủy hồ sơ thành công.' });
+    res.status(200).json({ message: 'Hủy hồ sơ thành công.' ,data: hoso});
 
   } catch (error) {
     await t.rollback();

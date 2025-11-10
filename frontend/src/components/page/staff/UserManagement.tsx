@@ -2,8 +2,8 @@
 import { useState, useEffect } from "react";
 import { userApi } from "../../../api/userApi";
 import type { Account } from "../../../api/types";
-import { Search, Filter, Plus, User, Shield } from "lucide-react";
-
+import { Plus, User } from "lucide-react";
+import { useAuth } from "../../../context/authContext";
 import UserTable from "../../../components/user/UserTable";
 import UserFilters from "../../../components/user/UserFilters";
 import CreateStaffModal from "../../../components/user/CreateStaffModal";
@@ -15,8 +15,9 @@ export default function UserManagement() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"Tất cả" | "Người dân" | "Cán bộ"| undefined >("Tất cả");
   const [showCreateModal, setShowCreateModal] = useState(false);
-
+  const {user}=useAuth();
   useEffect(() => {
+    if (!user || user?.role !== "Cán bộ") return;
     loadUsers();
   }, [roleFilter]);
 

@@ -30,16 +30,16 @@ export default function Header({
   onLogout,
   isLoggedIn,
   username,
-  onAuthChange,
+  // onAuthChange,
 }: Props) {
   const [open, setOpen] = useState<"login" | "register" | null>(null);
   const { user, logout } = useAuth(); 
 
   // Xử lý đăng nhập thành công
-  const handleLogin = (userData: AuthUser) => {
-    setOpen(null);
-    if (onAuthChange) onAuthChange(userData);
-  };
+  // const handleLogin = (userData: AuthUser) => {
+  //   setOpen(null);
+  //   if (onAuthChange) onAuthChange(userData);
+  // };
 
   // Xử lý đăng xuất
   const handleHeaderLogout = () => {

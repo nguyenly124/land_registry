@@ -3,7 +3,6 @@ import type {
   LoginRequest,
   LoginResponse,
   RegisterRequest,
-  RegisterResponse,
   RefreshTokenRequest,
   RefreshTokenResponse,
 } from './types';
@@ -11,7 +10,6 @@ import type {
 export const authApi = {
   login: async (data: LoginRequest): Promise<LoginResponse> => {
     const res = await axiosclient.post<LoginResponse>('/auth', data);
-    console.log("Raw API /auth response:", res.data);
     return res.data; 
   },
   
@@ -38,13 +36,10 @@ export const authApi = {
 
   // Đăng ký cuối cùng
   register: async (data: RegisterRequest) => {
-  console.log("[API] Gửi đăng ký:", data);
   try {
     const res = await axiosclient.post('/auth/register', data);
-    console.log("[API] Thành công:", res.data);
     return res.data;
   } catch (err: any) {
-    console.error("[API] Lỗi:", err.response?.data || err.message);
     throw err;
   }
 },

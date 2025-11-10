@@ -19,7 +19,7 @@ export default function StatsCards({ stats }: StatsCardsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       <button
-        onClick={() => navigate("/dossiers")}
+        onClick={() => navigate("/dossierstaff")}
         className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-2xl shadow-lg transform hover:scale-105 transition text-left"
       >
         <div className="flex items-center justify-between">

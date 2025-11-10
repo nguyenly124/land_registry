@@ -1,6 +1,6 @@
 // src/api/landApi.ts
 import axiosClient from "./axiosClient";
-import type { LandParcel, LandListResponse,CreateLandRequest,UpdateLandRequest } from "./types";
+import type { LandParcel, LandListResponse,UpdateLandRequest } from "./types";
 
 
 
@@ -15,15 +15,10 @@ export const landApi = {
 
   // Tạo mới
   create: async (data: any) => {
-    console.log("API landApi.create - Payload gửi đi:");
-    console.log(JSON.stringify(data, null, 2)); 
-
     try {
       const res = await axiosClient.post("/lands", data);
-      console.log("API thành công - Response:", res.data);
       return res.data;
     } catch (error: any) {
-      console.error("API lỗi - Response:", error.response?.data);
       throw error;
     }
   },

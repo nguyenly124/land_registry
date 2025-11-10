@@ -7,7 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import ParcelMap from "../../common/ParcelMap";
 import type { LandParcel } from "../../../api/types";
-
+import { useAuth } from "../../../context/authContext";
+import { AlertCircle } from "lucide-react";
 // === SCHEMA ===
 const createLandSchema = z.object({
   parcel_code: z.string().min(1).max(100),
@@ -39,7 +40,7 @@ type CreateLandForm = z.infer<typeof createLandSchema>;
 const createPreviewParcel = (data: Partial<CreateLandForm>): LandParcel | null => {
   if (!data.latitude || !data.longitude) return null;
   return {
-    parcel_id: "preview",
+    parcel_id: 0,
     parcel_code: data.parcel_code || "Chưa nhập mã",
     address: data.address || "Chưa nhập địa chỉ",
     area: data.area || 0,
@@ -54,7 +55,19 @@ const createPreviewParcel = (data: Partial<CreateLandForm>): LandParcel | null =
 };
 
 export default function CreateLandStaff() {
+   const { user } = useAuth();
   const navigate = useNavigate();
+  if (!user || user.role !== "Cán bộ") {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-100">
+        <div className="text-center p-8 bg-white rounded-2xl shadow-lg">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <p className="text-xl font-semibold text-red-600">Truy cập bị từ chối</p>
+          <p className="text-gray-600 mt-2">Bạn không có quyền truy cập trang này.</p>
+        </div>
+      </div>
+    );
+  }
   const [submitting, setSubmitting] = useState(false);
 
   const {
@@ -76,12 +89,7 @@ export default function CreateLandStaff() {
   const onSubmit = async (data: CreateLandForm) => {
     setSubmitting(true);
 
-    // LOG 1: DỮ LIỆU FORM TRƯỚC KHI GỬI
-    console.log("Form Submit – Dữ liệu người dùng nhập:");
-    console.log(JSON.stringify(data, null, 2));
-
     try {
-      // LOG 2: ĐƯỢC GỌI TRONG landApi.create
       await landApi.create(data);
       alert("Tạo thửa đất thành công!");
       navigate("/landstaff");

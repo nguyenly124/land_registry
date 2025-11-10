@@ -15,10 +15,8 @@ export default function ForgotPasswordModal({ open, onClose, onNext }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
-  console.log("[FRONTEND] Bắt đầu gửi OTP đến email:", email);
 
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-    console.warn("[FRONTEND] Email không hợp lệ:", email);
     setError("Vui lòng nhập email hợp lệ.");
     return;
   }
@@ -26,12 +24,9 @@ export default function ForgotPasswordModal({ open, onClose, onNext }: Props) {
   setLoading(true);
   setError("");
   try {
-    console.log("[FRONTEND] Gọi API sendOTP...");
     await authApi.forgotPassword(email);
-    console.log("[FRONTEND] Gửi OTP thành công → chuyển trang");
     onNext(email);
   } catch (err: any) {
-    console.error("[FRONTEND] Lỗi gửi OTP:", err.response?.data || err);
     setError(err.response?.data?.message || "Không thể gửi OTP.");
   } finally {
     setLoading(false);

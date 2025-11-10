@@ -1,7 +1,7 @@
 import axios from 'axios';
 import axiosClient from './axiosClient';
 
-import type { HoSoDocument, ApiResponse } from './types';
+import type { HoSoDocument } from './types';
 
 const uploadClient = axios.create({
   baseURL: axiosClient.defaults.baseURL,

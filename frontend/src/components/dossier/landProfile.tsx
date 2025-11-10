@@ -1,5 +1,5 @@
 // src/components/page/user/LandProfile.tsx
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { dossierApi } from "../../api/dossierApi";
 import type { HoSo } from "../../api/types";
 import { formatDate } from "../../../utils/date";

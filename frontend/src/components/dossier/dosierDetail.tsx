@@ -1,5 +1,5 @@
 // src/pages/DossierDetail.tsx
-import React, { useEffect, useState } from "react";
+import  { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { dossierApi, fileApi } from "../../api";
 import type { HoSo } from "../../api/types";
@@ -40,7 +40,7 @@ export default function DossierDetail() {
       alert("Vui lòng chọn ít nhất 1 file để thêm.");
       return;
     }
-
+    setLoading(true);
     try {
       const formData = new FormData();
       newFiles.forEach((file) => formData.append("files", file));
@@ -51,7 +51,9 @@ export default function DossierDetail() {
       window.location.reload();
     } catch (err: any) {
       alert(err.response?.data?.message || "Thêm tài liệu thất bại.");
-    }
+    } finally {
+        setLoading(false);
+      }
   };
 
   const handleCancelEdit = () => {
@@ -64,7 +66,7 @@ export default function DossierDetail() {
     if (!window.confirm("Bạn có chắc muốn hủy hồ sơ này?")) return;
 
     try {
-      await dossierApi.cancel({ hosoId: dossier.hoso_id });
+      await dossierApi.cancel( dossier.hoso_id );
       alert("Hồ sơ đã được hủy!");
       window.location.reload();
     } catch (err: any) {

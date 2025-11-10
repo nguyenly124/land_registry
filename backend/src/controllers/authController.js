@@ -14,7 +14,6 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ;
 
 // Chức năng Đăng ký tài khoản (Người dân)
 exports.register = async (req, res) => {
-  console.log("[BACKEND] Đăng ký request:", req.body);
     try {
         const { username, password, full_name, dob, address, phone, email, cccd } = req.body;
         

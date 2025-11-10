@@ -1,22 +1,30 @@
-exports.validate = (schema) => (req, res, next) => {
-  // `abortEarly: false` để nhận tất cả các lỗi validation cùng một lúc
-  const { error, value } = schema.validate(req.body, { abortEarly: false });
+exports.validate = (schema, type = "body") => (req, res, next) => {
+  const data = type === "body"
+    ? req.body
+    : type === "params"
+      ? req.params
+      : req.query;
+
+  const { error, value } = schema.validate(data, { abortEarly: false });
 
   if (error) {
-      const formattedErrors = error.details.map(err => {
-        let msg = err.message.replace(/["]/g, '');
-        msg = msg.charAt(0).toUpperCase() + msg.slice(1);
-        if (!msg.endsWith('.')) msg += '.';
-        return msg;
-      });
-      return res.status(400).json({
-        message: 'Dữ liệu không hợp lệ.',
-        errors: formattedErrors
-      });
-    }
+    const formattedErrors = error.details.map(err => {
+      let msg = err.message.replace(/["]/g, '');
+      msg = msg.charAt(0).toUpperCase() + msg.slice(1);
+      if (!msg.endsWith('.')) msg += '.';
+      return msg;
+    });
 
-  // Nếu validate thành công, gán dữ liệu đã được làm sạch vào req.body
-  // và chuyển sang middleware/controller tiếp theo
-  req.body = value;
+    return res.status(400).json({
+      message: 'Dữ liệu không hợp lệ.',
+      errors: formattedErrors
+    });
+  }
+
+  // Gán lại dữ liệu vào đúng chỗ
+  if (type === "body") req.body = value;
+  else if (type === "params") req.params = value;
+  else req.query = value;
+
   next();
 };

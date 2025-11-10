@@ -1,17 +1,20 @@
 // src/components/page/staff/LandDetailStaff.tsx
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { landApi } from "../../../api/landApi";
 import type  { LandParcel } from "../../../api/types";
 import ParcelMap from "../../common/ParcelMap";
+import { useAuth } from "../../../context/authContext";
 
 export default function LandDetailStaff() {
   const { id } = useParams<{ id: string }>();
+  const {user} = useAuth();
   const [land, setLand] = useState<LandParcel | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (!user || user?.role !== "Cán bộ") return;
     loadLand();
   }, [id]);
 

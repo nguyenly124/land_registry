@@ -12,7 +12,6 @@ import {
 import { dossierApi } from "../../../api/dossierApi";
 import type { HoSo,HoSoHistory } from "../../../api/types";
 import { formatDate } from "../../../../utils/date";
-import { number } from "zod";
 
 interface StatusBadgeProps {
   dossier: HoSo;

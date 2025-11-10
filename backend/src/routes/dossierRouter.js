@@ -24,7 +24,7 @@ router.put('/edit', authMiddleware, validate(editHoSoSchema), dossierController.
 // @route   PUT /api/hoso/cancel
 // @desc    Yêu cầu hủy hồ sơ
 // @access  Private (Chỉ người dân)
-router.put('/cancel', authMiddleware, validate(cancelHoSoSchema), dossierController.cancelHoSo);
+router.put('/cancel/:hoso_id', authMiddleware, validate(cancelHoSoSchema,"params"), dossierController.cancelHoSo);
 
 // @route   GET /api/hoso/search
 // @desc    Tìm kiếm hồ sơ
